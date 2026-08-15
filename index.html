@@ -8,22 +8,29 @@
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="screen-orientation" content="landscape" />
     <meta name="theme-color" content="#1a1208" />
     <title>三国保卫战 · 烽火三国塔防</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%231a1208' width='64' height='64' rx='10'/%3E%3Cpath fill='%23c9a227' d='M18 48 V22 l14-10 14 10 v26 H18z'/%3E%3Ccircle fill='%238b1e1e' cx='32' cy='30' r='6'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Serif+SC:wght@600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
     <div id="app">
       <canvas id="view"></canvas>
-      <div class="vignette"></div>
       <div id="loading" class="screen">
-        <div class="resource-bar loading-bar"><b id="loading-text">正在点兵……</b></div>
+        <div class="plaque loading-bar"><b id="loading-text">正在点兵……</b></div>
+      </div>
+
+      <div id="rotate" class="rotate-prompt hidden">
+        <div class="rotate-card">
+          <b>请横过来游玩</b>
+          <p>本关为横屏布防，请将手机横置。</p>
+        </div>
       </div>
 
       <div id="ui" class="hidden">
@@ -39,37 +46,30 @@
         </section>
 
         <section id="hud" class="hud hidden">
-          <header class="hud-top">
-            <div class="hud-top-left">
-              <button id="btn-menu" class="iron-btn" type="button">返</button>
-              <div class="resource-bar">
-                <span class="res"><img id="ico-heart" alt="" /><b id="stat-lives">20/20</b></span>
-                <span class="res"><img id="ico-coin" alt="" /><b id="stat-gold">0</b></span>
-                <span class="res"><img id="ico-skull" alt="" /><b id="stat-wave">波次 0/8</b></span>
-              </div>
+          <div class="hud-tl">
+            <button id="btn-menu" class="iron-btn pip" type="button">返</button>
+            <div class="plaque">
+              <span class="res"><img id="ico-heart" alt="" /><b id="stat-lives">20/20</b></span>
+              <span class="res"><img id="ico-coin" alt="" /><b id="stat-gold">0</b></span>
             </div>
-            <div class="wave-flag">
-              <small>波次</small>
-              <strong id="wave-num">0</strong>
-            </div>
-          </header>
+          </div>
+
+          <div class="wave-flag"><b id="stat-wave">0/8</b></div>
 
           <div id="toast" class="toast hidden"></div>
           <div id="banner" class="banner hidden"></div>
-          <div id="spot-hint" class="spot-hint hidden">点选石台建造营垒</div>
           <div id="wheel" class="kr-wheel hidden"></div>
 
-          <footer class="hud-bottom">
-            <div id="hero-bar" class="hero-bar"></div>
-            <div class="util-bar">
-              <button id="btn-wave" class="horn-btn" type="button">
-                <img id="ico-horn" alt="" />
-                <b id="btn-wave-label">出兵</b>
-              </button>
-              <button id="btn-speed" class="iron-btn sm" type="button">×1</button>
-              <button id="btn-pause" class="iron-btn sm" type="button">停</button>
-            </div>
-          </footer>
+          <div id="hero-bar" class="hero-bar"></div>
+
+          <div class="hud-br">
+            <button id="btn-wave" class="horn-btn" type="button">
+              <img id="ico-horn" alt="" />
+              <b id="btn-wave-label">出兵</b>
+            </button>
+            <button id="btn-speed" class="iron-btn pip" type="button">×1</button>
+            <button id="btn-pause" class="iron-btn pip" type="button">停</button>
+          </div>
         </section>
 
         <section id="overlay" class="screen overlay hidden">
@@ -78,7 +78,7 @@
             <p id="overlay-text"></p>
             <div class="overlay-actions">
               <button id="btn-retry" class="horn-btn" type="button"><b>再守此关</b></button>
-              <button id="btn-home" class="iron-btn" type="button">选关</button>
+              <button id="btn-home" class="iron-btn pip" type="button">选关</button>
             </div>
           </div>
         </section>
