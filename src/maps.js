@@ -9,7 +9,7 @@ export const MAPS = [
     id: "hulao",
     name: "虎牢道",
     subtitle: "山隘土路 · 一夫当关",
-    art: "maps/hulao.png",
+    art: "maps/hulao-thumb.jpg",
     startGold: 230,
     theme: {
       fog: 0x8fb86a,
@@ -50,7 +50,7 @@ export const MAPS = [
     id: "chibi",
     name: "赤壁水寨",
     subtitle: "江上木寨 · 火攻待发",
-    art: "maps/chibi.png",
+    art: "maps/chibi-thumb.jpg",
     startGold: 250,
     theme: {
       fog: 0x3a7a88,
@@ -90,7 +90,7 @@ export const MAPS = [
     id: "qishan",
     name: "祁山栈道",
     subtitle: "绝壁木栈 · 一线天通",
-    art: "maps/qishan.png",
+    art: "maps/qishan-thumb.jpg",
     startGold: 240,
     theme: {
       fog: 0x9aaa88,
