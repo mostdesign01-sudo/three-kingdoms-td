@@ -8,6 +8,7 @@ import {
   TOWERS,
   WAVES,
 } from "./content.js";
+import { MAP_SIZE } from "./art.js";
 import { MAPS, buildPath, getMap } from "./maps.js";
 import {
   decorateMap,
@@ -41,7 +42,7 @@ export class Game {
     this.scene = new THREE.Scene();
     this.viewSize = 14;
     this.camera = new THREE.OrthographicCamera(-14, 14, 14, -14, 0.1, 200);
-    this.camera.position.set(0, 40, 8);
+    this.camera.position.set(0, 60, 0.01);
     this.camera.lookAt(0, 0, 0);
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -50,7 +51,7 @@ export class Game {
       powerPreference: "high-performance",
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.setClearColor(0x4a7a32, 1);
+    this.renderer.setClearColor(0x120c08, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     this.hemi = new THREE.HemisphereLight(0xfff0c8, 0x3d5a28, 0.95);
@@ -172,13 +173,13 @@ export class Game {
   }
 
   applyTheme(theme) {
-    this.scene.background = new THREE.Color(theme.fog);
+    this.scene.background = new THREE.Color(0x120c08);
     this.scene.fog = null;
     this.hemi.color.setHex(theme.hemiSky);
     this.hemi.groundColor.setHex(theme.hemiGround);
     this.sun.color.setHex(theme.sun);
     this.sun.position.set(...theme.sunDir);
-    this.renderer.setClearColor(theme.fog, 1);
+    this.renderer.setClearColor(0x120c08, 1);
   }
 
   clearWorld() {
@@ -191,15 +192,19 @@ export class Game {
   }
 
   frameMap() {
-    this.camera.position.set(0, 40, 8);
+    this.camera.position.set(0, 60, 0.01);
     this.camera.lookAt(0, 0, 0);
+    this.resize();
   }
 
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
     const aspect = w / Math.max(1, h);
-    const s = h > w ? 16.5 : 12.6;
+    const pad = 1.06;
+    const halfW = (MAP_SIZE.w / 2) * pad;
+    const halfD = (MAP_SIZE.d / 2) * pad;
+    const s = Math.max(halfD, halfW / aspect);
     this.viewSize = s;
     this.camera.left = -s * aspect;
     this.camera.right = s * aspect;
@@ -207,7 +212,7 @@ export class Game {
     this.camera.bottom = -s;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
-    this.camera.position.set(0, 40, 8);
+    this.camera.position.set(0, 60, 0.01);
     this.camera.lookAt(0, 0, 0);
   }
 

@@ -51,6 +51,12 @@ KEYED = {
 }
 
 
+def is_key(r: int, g: int, b: int) -> bool:
+    magenta = r > 150 and b > 130 and g < 120 and (r + b) - 2 * g > 140
+    pink = r > 210 and b > 180 and g > 120 and g < 220 and r > g + 18
+    return magenta or pink
+
+
 def chroma(im: Image.Image) -> Image.Image:
     im = im.convert("RGBA")
     px = im.load()
@@ -58,10 +64,33 @@ def chroma(im: Image.Image) -> Image.Image:
     for y in range(h):
         for x in range(w):
             r, g, b, a = px[x, y]
-            magenta = r > 160 and b > 140 and g < 110 and (r + b) - 2 * g > 160
-            near_white_magenta = r > 220 and b > 200 and g > 140 and g < 210 and r > g + 20
-            if magenta or near_white_magenta:
+            if is_key(r, g, b):
                 px[x, y] = (r, g, b, 0)
+
+    # Flood leftover studio backdrop from the edges without eating black hair/armor.
+    seen = bytearray(w * h)
+    stack = []
+    for x in range(w):
+        stack.append((x, 0))
+        stack.append((x, h - 1))
+    for y in range(h):
+        stack.append((0, y))
+        stack.append((w - 1, y))
+    while stack:
+        x, y = stack.pop()
+        if x < 0 or y < 0 or x >= w or y >= h:
+            continue
+        i = y * w + x
+        if seen[i]:
+            continue
+        seen[i] = 1
+        r, g, b, a = px[x, y]
+        backdrop = a < 12 or is_key(r, g, b) or (a < 80 and r > 140 and b > 120 and g < 140)
+        if not backdrop:
+            continue
+        if a:
+            px[x, y] = (r, g, b, 0)
+        stack.extend(((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))
     return crop_alpha(im)
 
 

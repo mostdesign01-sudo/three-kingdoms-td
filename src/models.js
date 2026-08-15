@@ -32,19 +32,27 @@ export function mesh(geometry, material, x, y, z, sx = 1, sy = 1, sz = 1) {
   return m;
 }
 
-const UNIT_SIZE = {
-  guanyu: [2.15, 2.65],
-  zhaoyun: [2.05, 2.45],
-  zhuge: [2.0, 2.55],
-  lubu: [2.7, 3.35],
-  boss: [2.7, 3.35],
-  scout: [1.55, 1.85],
-  infantry: [1.6, 1.95],
-  cavalry: [2.15, 2.35],
-  armored: [1.85, 2.2],
-  elite: [1.85, 2.35],
-  soldier: [1.55, 1.95],
+const UNIT_HEIGHT = {
+  guanyu: 2.7,
+  zhaoyun: 2.5,
+  zhuge: 2.55,
+  lubu: 3.25,
+  boss: 3.25,
+  scout: 1.9,
+  infantry: 2.0,
+  cavalry: 2.25,
+  armored: 2.15,
+  elite: 2.2,
+  soldier: 1.95,
 };
+
+function spriteSize(texture, targetH, maxW = 3.2) {
+  const img = texture?.image;
+  const aspect = img?.width && img?.height ? img.width / img.height : 0.72;
+  const h = targetH;
+  const w = Math.min(maxW, h * aspect);
+  return [w, h];
+}
 
 export function makeBlob(color = 0x111111, scale = 1) {
   const m = mesh(
@@ -60,7 +68,7 @@ export function makeCharacter({ hero = null, kind = null, scale = 1 } = {}) {
   const id = hero === "lubu" ? "lubu" : hero || kind || "infantry";
   const key = id === "boss" ? "lubu" : id;
   const texture = tex(`units/${key}.png`);
-  const [w, h] = UNIT_SIZE[key] || [1.6, 2];
+  const [w, h] = spriteSize(texture, UNIT_HEIGHT[key] || 2);
   const sprite = makeBillboard(texture, w * scale, h * scale);
   sprite.userData.face = 1;
   return sprite;
@@ -69,18 +77,13 @@ export function makeCharacter({ hero = null, kind = null, scale = 1 } = {}) {
 export function makeTower(type, level = 1) {
   const lv = Math.max(1, Math.min(3, level));
   const texture = tex(`towers/${type}-${lv}.png`);
-  const sizes = {
-    ballista: [2.6, 3.3],
-    thunder: [2.8, 2.6],
-    barracks: [2.7, 2.7],
-    sage: [2.5, 3.2],
-  };
-  const [w, h] = sizes[type] || [2.5, 2.8];
+  const heights = { ballista: 3.25, thunder: 2.7, barracks: 2.75, sage: 3.15 };
+  const [w, h] = spriteSize(texture, heights[type] || 2.9, 3.4);
   return makeBillboard(texture, w, h);
 }
 
 export function makeSpot() {
-  return makeDecal(tex("ui/pad.png"), 2.15);
+  return makeDecal(tex("ui/pad.png"), 1.85);
 }
 
 export function makeHpBar() {
