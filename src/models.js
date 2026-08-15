@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { makeBillboard, makeDecal, makeGround, tex } from "./art.js";
+import { ART, makeBillboard, makeDecal, makeGround, tex } from "./art.js";
 
 export const geo = {
   box: new THREE.BoxGeometry(1, 1, 1),
@@ -67,7 +67,7 @@ export function makeBlob(color = 0x111111, scale = 1) {
 export function makeCharacter({ hero = null, kind = null, scale = 1 } = {}) {
   const id = hero === "lubu" ? "lubu" : hero || kind || "infantry";
   const key = id === "boss" ? "lubu" : id;
-  const texture = tex(`units/${key}.png`);
+  const texture = tex(ART.unit(key));
   const [w, h] = spriteSize(texture, UNIT_HEIGHT[key] || 2);
   const sprite = makeBillboard(texture, w * scale, h * scale);
   sprite.userData.face = 1;
@@ -76,14 +76,14 @@ export function makeCharacter({ hero = null, kind = null, scale = 1 } = {}) {
 
 export function makeTower(type, level = 1) {
   const lv = Math.max(1, Math.min(3, level));
-  const texture = tex(`towers/${type}-${lv}.png`);
+  const texture = tex(ART.tower(type, lv));
   const heights = { ballista: 3.25, thunder: 2.7, barracks: 2.75, sage: 3.15 };
   const [w, h] = spriteSize(texture, heights[type] || 2.9, 3.4);
   return makeBillboard(texture, w, h);
 }
 
 export function makeSpot() {
-  return makeDecal(tex("ui/pad.png"), 1.85);
+  return makeDecal(tex(ART.pad), 1.85);
 }
 
 export function makeHpBar() {
@@ -129,7 +129,7 @@ export function makePortal() {
 
 export function decorateMap(scene, map) {
   const group = new THREE.Group();
-  const texture = tex(`maps/${map.id}.png`);
+  const texture = tex(ART.map(map.id));
   group.add(makeGround(texture));
   scene.add(group);
   return group;

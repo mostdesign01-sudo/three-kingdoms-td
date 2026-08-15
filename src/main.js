@@ -1,17 +1,18 @@
 import "./style.css";
-import { asset, loadArt } from "./art.js";
+import { ART, asset } from "./art.js";
 import { Game } from "./Game.js";
 
 const loading = document.querySelector("#loading");
+const loadingText = document.querySelector("#loading-text");
 const uiRoot = document.querySelector("#ui");
 const canvas = document.querySelector("#view");
 
 function bindIcons() {
   const pairs = [
-    ["#ico-heart", "ui/heart.png"],
-    ["#ico-coin", "ui/coin.png"],
-    ["#ico-skull", "ui/skull.png"],
-    ["#ico-horn", "ui/horn.png"],
+    ["#ico-heart", ART.heart],
+    ["#ico-coin", ART.coin],
+    ["#ico-skull", ART.skull],
+    ["#ico-horn", ART.horn],
   ];
   for (const [sel, path] of pairs) {
     const el = document.querySelector(sel);
@@ -45,6 +46,12 @@ const els = {
 
 let game;
 let lastPanelKey = "";
+let entering = false;
+
+function setLoading(hidden, text) {
+  if (text && loadingText) loadingText.textContent = text;
+  loading.classList.toggle("hidden", hidden);
+}
 
 function renderMenu(view) {
   if (els.mapList.childElementCount) return;
@@ -53,7 +60,7 @@ function renderMenu(view) {
     btn.className = "map-card";
     btn.type = "button";
     btn.innerHTML = `<img src="${asset(map.art)}" alt=""><div><h3>${map.name}</h3><p>${map.subtitle}</p></div>`;
-    btn.addEventListener("click", () => game.startMap(map.id));
+    btn.addEventListener("click", () => enterMap(map.id));
     els.mapList.appendChild(btn);
   }
 }
@@ -90,7 +97,7 @@ function renderWheel(view) {
       btn.type = "button";
       btn.style.cssText = slotStyle(i, 4);
       btn.disabled = view.gold < t.cost;
-      btn.innerHTML = `<img src="${asset(`ui/icon-${t.id}.png`)}" alt=""><b>${t.name}</b><small>${t.cost}</small>`;
+      btn.innerHTML = `<img src="${asset(ART.icon(t.id))}" alt=""><b>${t.name}</b><small>${t.cost}</small>`;
       btn.addEventListener("click", () => game.placeTower(view.build.spotId, t.id));
       els.wheel.appendChild(btn);
     });
@@ -154,7 +161,7 @@ function renderHeroes(view) {
     btn.classList.toggle("ready", h.ready);
     btn.disabled = !h.ready && view.aimHero !== h.id;
     const pct = h.maxCd ? Math.round((1 - h.cd / h.maxCd) * 100) : 100;
-    btn.innerHTML = `<img src="${asset(`ui/portrait-${h.id}.png`)}" alt=""><b>${h.name}</b><small>${ready}</small><i class="cd-ring" style="--cd:${pct}"></i>`;
+    btn.innerHTML = `<img src="${asset(ART.portrait(h.id))}" alt=""><b>${h.name}</b><small>${ready}</small><i class="cd-ring" style="--cd:${pct}"></i>`;
   }
 }
 
@@ -222,21 +229,42 @@ function onView(view) {
   }
 }
 
-async function boot() {
-  await loadArt();
-  loading.classList.add("hidden");
-  uiRoot.classList.remove("hidden");
-  game = new Game(canvas);
-  game.on(onView);
-  document.querySelector("#btn-wave").addEventListener("click", () => game.startWave());
-  document.querySelector("#btn-speed").addEventListener("click", () => game.cycleSpeed());
-  document.querySelector("#btn-pause").addEventListener("click", () => game.togglePause());
-  document.querySelector("#btn-menu").addEventListener("click", () => game.backToMenu());
-  document.querySelector("#btn-retry").addEventListener("click", () => {
-    if (game.map) game.startMap(game.map.id);
-  });
-  document.querySelector("#btn-home").addEventListener("click", () => game.backToMenu());
-  game.emit();
+async function enterMap(id) {
+  if (!game || entering) return;
+  entering = true;
+  setLoading(false, "点兵 0/8");
+  try {
+    await game.startMap(id, (done, total) => {
+      setLoading(false, `点兵 ${done}/${total}`);
+    });
+  } catch (err) {
+    console.warn("[boot] map load failed", err);
+  } finally {
+    entering = false;
+    setLoading(true);
+  }
+}
+
+function boot() {
+  try {
+    game = new Game(canvas);
+    game.on(onView);
+    document.querySelector("#btn-wave").addEventListener("click", () => game.startWave());
+    document.querySelector("#btn-speed").addEventListener("click", () => game.cycleSpeed());
+    document.querySelector("#btn-pause").addEventListener("click", () => game.togglePause());
+    document.querySelector("#btn-menu").addEventListener("click", () => game.backToMenu());
+    document.querySelector("#btn-retry").addEventListener("click", () => {
+      if (game.map) enterMap(game.map.id);
+    });
+    document.querySelector("#btn-home").addEventListener("click", () => game.backToMenu());
+    game.emit();
+  } catch (err) {
+    console.warn("[boot] failed", err);
+    if (loadingText) loadingText.textContent = "点兵受阻，请刷新再试";
+  } finally {
+    uiRoot.classList.remove("hidden");
+    setLoading(true);
+  }
 }
 
 boot();

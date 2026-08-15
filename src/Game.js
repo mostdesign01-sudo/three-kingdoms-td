@@ -8,7 +8,7 @@ import {
   TOWERS,
   WAVES,
 } from "./content.js";
-import { MAP_SIZE } from "./art.js";
+import { MAP_SIZE, loadPlayPack, prefetchRest } from "./art.js";
 import { MAPS, buildPath, getMap } from "./maps.js";
 import {
   decorateMap,
@@ -105,13 +105,14 @@ export class Game {
   showMenuPreview() {
     this.clearWorld();
     this.applyTheme(MAPS[0].theme);
-    decorateMap(this.world, MAPS[0]);
     this.frameMap();
   }
 
-  startMap(id) {
+  async startMap(id, onProgress) {
     const map = getMap(id);
     if (!map) return;
+    await loadPlayPack(map.id, onProgress);
+    prefetchRest(map.id);
     this.mode = "playing";
     this.resetPlayState();
     this.map = map;
