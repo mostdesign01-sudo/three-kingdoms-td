@@ -1,0 +1,384 @@
+:root {
+  --ink: #1a0f0a;
+  --paper: #f3e2c2;
+  --gold: #d4b24a;
+  --gold-dim: #8a6d28;
+  --blood: #8b1e1e;
+  --jade: #2f6b4f;
+  --panel: rgba(18, 10, 7, 0.82);
+  --stroke: rgba(212, 178, 74, 0.55);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #120a07;
+  color: var(--paper);
+  font-family: "Noto Serif SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
+}
+
+#view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+#ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.screen,
+.panel,
+.dock,
+.top-bar,
+.bottom-stack,
+button {
+  pointer-events: auto;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(24px + var(--safe-t)) 18px calc(24px + var(--safe-b));
+  background:
+    radial-gradient(circle at 50% 20%, rgba(139, 30, 30, 0.28), transparent 46%),
+    linear-gradient(180deg, rgba(10, 6, 4, 0.55), rgba(10, 6, 4, 0.78));
+}
+
+.menu-seal {
+  width: 72px;
+  height: 72px;
+  border: 3px solid var(--gold);
+  color: var(--gold);
+  display: grid;
+  place-items: center;
+  font-size: 40px;
+  font-family: "Ma Shan Zheng", serif;
+  transform: rotate(-8deg);
+  margin-bottom: 8px;
+}
+
+.title {
+  margin: 0;
+  font-family: "Ma Shan Zheng", "Noto Serif SC", serif;
+  font-size: clamp(42px, 12vw, 72px);
+  letter-spacing: 0.12em;
+  color: #f6e6b8;
+  text-shadow: 0 4px 0 #5a1a14, 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.subtitle,
+.blurb {
+  margin: 4px 0 0;
+  color: #e6d3a4;
+  text-align: center;
+}
+
+.blurb {
+  max-width: 28em;
+  opacity: 0.85;
+  margin-bottom: 22px;
+}
+
+.map-list {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 12px;
+}
+
+.map-card {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  align-items: center;
+  min-height: 84px;
+  padding: 12px 14px;
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  color: inherit;
+  text-align: left;
+  border-radius: 14px;
+}
+
+.map-card:active {
+  transform: scale(0.985);
+  border-color: var(--gold);
+}
+
+.map-swatch {
+  width: 72px;
+  height: 60px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.map-card h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.map-card p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #d7c49a;
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.top-bar,
+.dock,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  backdrop-filter: blur(8px);
+}
+
+.top-bar {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr 1fr;
+  gap: 8px;
+  margin: calc(8px + var(--safe-t)) 10px 0;
+  padding: 8px;
+  border-radius: 14px;
+}
+
+.stat {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+
+.stat.gold { color: #f0d27a; }
+.stat.lives { color: #ef8b7a; }
+.stat.wave { color: #cfe3c4; }
+
+.bottom-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 10px calc(10px + var(--safe-b));
+}
+
+.panel {
+  padding: 10px;
+  border-radius: 16px;
+}
+
+.panel-title {
+  font-size: 14px;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.action-row,
+.hero-bar,
+.util-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.action-row {
+  overflow-x: auto;
+}
+
+.dock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 16px;
+}
+
+button {
+  appearance: none;
+  border: 1px solid var(--stroke);
+  background: #2a1810;
+  color: var(--paper);
+  border-radius: 12px;
+  min-height: 56px;
+  min-width: 56px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.42;
+}
+
+button.primary {
+  flex: 1;
+  background: linear-gradient(180deg, #9a2a22, #6d1612);
+  border-color: #d4b24a;
+  font-size: 18px;
+}
+
+button.ready {
+  box-shadow: 0 0 0 2px #d4b24a inset;
+}
+
+.icon-btn {
+  min-width: 64px;
+}
+
+.tower-btn,
+.hero-btn {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.tower-btn small,
+.hero-btn small {
+  color: #f0d27a;
+  font-size: 12px;
+}
+
+.hero-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-btn .cd {
+  position: absolute;
+  inset: auto 6px 6px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+}
+
+.hero-btn .cd > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--gold);
+  border-radius: inherit;
+}
+
+.hero-btn.aiming {
+  border-color: #f0d27a;
+  background: #4a2d12;
+}
+
+.toast,
+.banner,
+.spot-hint {
+  pointer-events: none;
+  align-self: center;
+  text-align: center;
+}
+
+.toast {
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid var(--stroke);
+}
+
+.banner {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 22px;
+  font-size: 28px;
+  font-family: "Ma Shan Zheng", serif;
+  letter-spacing: 0.16em;
+  background: rgba(20, 8, 6, 0.72);
+  border: 1px solid var(--gold);
+}
+
+.spot-hint {
+  margin: 8px auto 0;
+  color: #f0d27a;
+}
+
+.overlay {
+  background: rgba(8, 4, 3, 0.72);
+}
+
+.overlay-card {
+  width: min(420px, 100%);
+  padding: 22px 18px;
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  border-radius: 18px;
+  text-align: center;
+}
+
+.overlay-card h2 {
+  margin: 0 0 8px;
+  font-family: "Ma Shan Zheng", serif;
+  font-size: 40px;
+  color: #f6e6b8;
+}
+
+.overlay-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+@media (min-width: 720px) {
+  .top-bar {
+    grid-template-columns: 90px repeat(3, 140px);
+    justify-content: start;
+  }
+
+  .dock {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .hero-bar {
+    flex: 1;
+  }
+
+  .util-bar {
+    width: 280px;
+  }
+}

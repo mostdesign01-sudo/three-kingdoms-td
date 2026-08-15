@@ -1,0 +1,242 @@
+export const TOWERS = {
+  ballista: {
+    id: "ballista",
+    name: "连弩楼",
+    desc: "疾射连弩，专打单兵",
+    cost: 80,
+    color: 0xb85c38,
+    range: 6.4,
+    fireRate: 0.32,
+    damage: 9,
+    projectile: "bolt",
+    upgrades: [
+      { cost: 90, damage: 15, fireRate: 0.26, range: 7.1 },
+      { cost: 140, damage: 24, fireRate: 0.2, range: 7.8 },
+    ],
+  },
+  thunder: {
+    id: "thunder",
+    name: "霹雳车",
+    desc: "火石轰击，溅射成片",
+    cost: 125,
+    color: 0x6d4c2b,
+    range: 8.2,
+    fireRate: 1.35,
+    damage: 26,
+    aoe: 2.3,
+    projectile: "boulder",
+    upgrades: [
+      { cost: 110, damage: 38, fireRate: 1.15, range: 8.8, aoe: 2.6 },
+      { cost: 160, damage: 54, fireRate: 1.0, range: 9.4, aoe: 3.0 },
+    ],
+  },
+  barracks: {
+    id: "barracks",
+    name: "虎贲营",
+    desc: "甲士拦路，近身肉搏",
+    cost: 100,
+    color: 0x8b1e1e,
+    range: 4.4,
+    fireRate: 0.7,
+    damage: 7,
+    soldiers: 3,
+    soldierHp: 46,
+    projectile: "melee",
+    upgrades: [
+      { cost: 95, damage: 11, soldierHp: 70, range: 4.8 },
+      { cost: 150, damage: 16, soldierHp: 100, range: 5.2 },
+    ],
+  },
+  sage: {
+    id: "sage",
+    name: "谋士台",
+    desc: "术法迟滞，削弱敌势",
+    cost: 110,
+    color: 0x3d5c4a,
+    range: 6.8,
+    fireRate: 0.85,
+    damage: 11,
+    slow: 0.45,
+    slowTime: 2.1,
+    projectile: "orb",
+    upgrades: [
+      { cost: 100, damage: 17, slow: 0.55, slowTime: 2.5, range: 7.4 },
+      { cost: 155, damage: 25, slow: 0.65, slowTime: 3.0, range: 8.0 },
+    ],
+  },
+};
+
+export const HEROES = {
+  guanyu: {
+    id: "guanyu",
+    name: "关羽",
+    skill: "青龙斩",
+    desc: "偃月横扫，重创周围敌军",
+    color: 0x8b1e1e,
+    hp: 220,
+    damage: 20,
+    fireRate: 0.85,
+    range: 2.3,
+    speed: 3.4,
+    skillCd: 12,
+    skillRadius: 4.2,
+    skillDamage: 90,
+  },
+  zhaoyun: {
+    id: "zhaoyun",
+    name: "赵云",
+    skill: "七进七出",
+    desc: "银枪突进，贯穿一条敌线",
+    color: 0xd8deea,
+    hp: 170,
+    damage: 13,
+    fireRate: 0.5,
+    range: 2.5,
+    speed: 4.4,
+    skillCd: 10,
+    skillRadius: 1.6,
+    skillDamage: 70,
+    dash: 9,
+  },
+  zhuge: {
+    id: "zhuge",
+    name: "诸葛亮",
+    skill: "八阵图",
+    desc: "布阵困敌，持续伤害并减速",
+    color: 0x3f7a4e,
+    hp: 130,
+    damage: 12,
+    fireRate: 0.75,
+    range: 5.2,
+    speed: 2.8,
+    skillCd: 14,
+    skillRadius: 3.6,
+    skillDamage: 16,
+    zoneTime: 5.2,
+  },
+};
+
+export const ENEMIES = {
+  scout: {
+    id: "scout",
+    name: "斥候",
+    hp: 28,
+    speed: 2.15,
+    bounty: 6,
+    lives: 1,
+    scale: 0.9,
+    color: 0xc4a574,
+  },
+  infantry: {
+    id: "infantry",
+    name: "步卒",
+    hp: 42,
+    speed: 1.55,
+    bounty: 8,
+    lives: 1,
+    scale: 1,
+    color: 0x6b5344,
+  },
+  cavalry: {
+    id: "cavalry",
+    name: "铁骑",
+    hp: 48,
+    speed: 2.85,
+    bounty: 12,
+    lives: 1,
+    scale: 1.08,
+    color: 0x4a3b2f,
+  },
+  armored: {
+    id: "armored",
+    name: "藤甲兵",
+    hp: 110,
+    speed: 1.05,
+    bounty: 16,
+    lives: 1,
+    scale: 1.15,
+    color: 0x35553a,
+  },
+  elite: {
+    id: "elite",
+    name: "校尉",
+    hp: 160,
+    speed: 1.45,
+    bounty: 22,
+    lives: 2,
+    scale: 1.22,
+    color: 0x5a2a2a,
+  },
+  boss: {
+    id: "boss",
+    name: "吕布幻影",
+    hp: 980,
+    speed: 1.28,
+    bounty: 120,
+    lives: 8,
+    scale: 1.7,
+    color: 0x4b2a78,
+  },
+};
+
+export const WAVES = [
+  {
+    name: "斥候来犯",
+    groups: [{ type: "scout", count: 8, interval: 0.7, delay: 0 }],
+  },
+  {
+    name: "黄巾余党",
+    groups: [{ type: "infantry", count: 12, interval: 0.55, delay: 0 }],
+  },
+  {
+    name: "西凉铁骑",
+    groups: [
+      { type: "infantry", count: 8, interval: 0.6, delay: 0 },
+      { type: "cavalry", count: 5, interval: 0.9, delay: 2.2 },
+    ],
+  },
+  {
+    name: "先锋压境",
+    groups: [
+      { type: "infantry", count: 10, interval: 0.5, delay: 0 },
+      { type: "cavalry", count: 7, interval: 0.75, delay: 1.5 },
+    ],
+  },
+  {
+    name: "藤甲突进",
+    groups: [
+      { type: "armored", count: 6, interval: 1.1, delay: 0 },
+      { type: "infantry", count: 10, interval: 0.45, delay: 1.4 },
+    ],
+  },
+  {
+    name: "联军合围",
+    groups: [
+      { type: "cavalry", count: 8, interval: 0.65, delay: 0 },
+      { type: "armored", count: 5, interval: 1.0, delay: 2 },
+      { type: "infantry", count: 8, interval: 0.4, delay: 3.5 },
+    ],
+  },
+  {
+    name: "猛将突击",
+    groups: [
+      { type: "elite", count: 4, interval: 1.4, delay: 0 },
+      { type: "cavalry", count: 8, interval: 0.55, delay: 1 },
+      { type: "armored", count: 4, interval: 1.1, delay: 3 },
+    ],
+  },
+  {
+    name: "吕布幻影",
+    groups: [
+      { type: "elite", count: 3, interval: 1.2, delay: 0 },
+      { type: "boss", count: 1, interval: 0.1, delay: 2.4 },
+      { type: "cavalry", count: 6, interval: 0.7, delay: 3.2 },
+      { type: "armored", count: 4, interval: 1.0, delay: 5 },
+    ],
+  },
+];
+
+export const START_GOLD = 230;
+export const START_LIVES = 20;
+export const SELL_RATIO = 0.6;
+export const HERO_RESPAWN = 12;
