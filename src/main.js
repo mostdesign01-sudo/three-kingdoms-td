@@ -11,7 +11,6 @@ function bindIcons() {
   const pairs = [
     ["#ico-heart", ART.heart],
     ["#ico-coin", ART.coin],
-    ["#ico-skull", ART.skull],
     ["#ico-horn", ART.horn],
   ];
   for (const [sel, path] of pairs) {
@@ -22,6 +21,8 @@ function bindIcons() {
 
 bindIcons();
 
+const rotate = document.querySelector("#rotate");
+
 const els = {
   menu: document.querySelector("#menu"),
   hud: document.querySelector("#hud"),
@@ -30,10 +31,8 @@ const els = {
   gold: document.querySelector("#stat-gold"),
   lives: document.querySelector("#stat-lives"),
   wave: document.querySelector("#stat-wave"),
-  waveNum: document.querySelector("#wave-num"),
   toast: document.querySelector("#toast"),
   banner: document.querySelector("#banner"),
-  hint: document.querySelector("#spot-hint"),
   wheel: document.querySelector("#wheel"),
   heroes: document.querySelector("#hero-bar"),
   waveBtn: document.querySelector("#btn-wave"),
@@ -69,18 +68,33 @@ function setHidden(el, hidden) {
   el.classList.toggle("hidden", hidden);
 }
 
+function isPortrait() {
+  return window.innerHeight > window.innerWidth + 8;
+}
+
+function syncOrientation() {
+  const portrait = isPortrait();
+  rotate.classList.toggle("hidden", !portrait);
+  game?.setOrientHold(portrait);
+  try {
+    screen.orientation?.lock?.("landscape");
+  } catch {
+    /* browsers only allow this in fullscreen / installed PWA */
+  }
+}
+
 function clampWheel(x, y) {
-  const pad = 130;
+  const pad = 140;
   return {
     x: Math.max(pad, Math.min(window.innerWidth - pad, x)),
-    y: Math.max(pad + 40, Math.min(window.innerHeight - 170, y)),
+    y: Math.max(pad, Math.min(window.innerHeight - pad, y)),
   };
 }
 
 function slotStyle(i, n) {
   const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
-  const r = 86;
-  return `left:${120 + Math.cos(a) * r}px;top:${120 + Math.sin(a) * r}px`;
+  const r = 92;
+  return `left:${130 + Math.cos(a) * r}px;top:${130 + Math.sin(a) * r}px`;
 }
 
 function renderWheel(view) {
@@ -156,12 +170,12 @@ function renderHeroes(view) {
   for (const h of view.heroes) {
     const btn = els.heroes.querySelector(`[data-id="${h.id}"]`);
     if (!btn) continue;
-    const ready = h.ready ? "可放" : h.dead ? "休整" : `${Math.ceil(h.cd)}s`;
     btn.classList.toggle("aiming", view.aimHero === h.id);
     btn.classList.toggle("ready", h.ready);
     btn.disabled = !h.ready && view.aimHero !== h.id;
     const pct = h.maxCd ? Math.round((1 - h.cd / h.maxCd) * 100) : 100;
-    btn.innerHTML = `<img src="${asset(ART.portrait(h.id))}" alt=""><b>${h.name}</b><small>${ready}</small><i class="cd-ring" style="--cd:${pct}"></i>`;
+    btn.title = h.ready ? h.skill : h.name;
+    btn.innerHTML = `<img src="${asset(ART.portrait(h.id))}" alt="${h.name}"><i class="cd-ring" style="--cd:${pct}"></i>`;
   }
 }
 
@@ -180,8 +194,7 @@ function onView(view) {
 
   els.gold.textContent = view.gold;
   els.lives.textContent = `${view.lives}/20`;
-  els.wave.textContent = `波次 ${view.wave}/${view.waveTotal}`;
-  els.waveNum.textContent = String(view.wave);
+  els.wave.textContent = `${view.wave}/${view.waveTotal}`;
   els.speedBtn.textContent = `×${view.speed}`;
   els.pauseBtn.textContent = view.paused ? "续" : "停";
   els.waveBtn.disabled = !view.pendingWave || view.won || view.lost;
@@ -205,9 +218,8 @@ function onView(view) {
   }
 
   renderHeroes(view);
-  setHidden(els.hint, !(view.selected == null && view.wave === 0));
 
-  if (view.toast && performance.now() - view.toast.at < 2200) {
+  if (view.toast && performance.now() - view.toast.at < 1800) {
     els.toast.textContent = view.toast.text;
     setHidden(els.toast, false);
   } else {
@@ -258,6 +270,9 @@ function boot() {
     });
     document.querySelector("#btn-home").addEventListener("click", () => game.backToMenu());
     game.emit();
+    syncOrientation();
+    window.addEventListener("resize", syncOrientation);
+    window.addEventListener("orientationchange", syncOrientation);
   } catch (err) {
     console.warn("[boot] failed", err);
     if (loadingText) loadingText.textContent = "点兵受阻，请刷新再试";

@@ -63,12 +63,19 @@ export class Game {
     this.world = new THREE.Group();
     this.scene.add(this.world);
 
+    this.panX = 0;
+    this.panZ = 0;
+    this.drag = null;
+    this.orientHold = false;
     this.resetPlayState();
     this.resize();
     this.showMenuPreview();
 
     window.addEventListener("resize", () => this.resize());
     canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
+    window.addEventListener("pointermove", (e) => this.onPointerMove(e));
+    window.addEventListener("pointerup", (e) => this.onPointerUp(e));
+    window.addEventListener("pointercancel", (e) => this.onPointerUp(e));
     requestAnimationFrame(() => this.loop());
   }
 
@@ -193,8 +200,8 @@ export class Game {
   }
 
   frameMap() {
-    this.camera.position.set(0, 60, 0.01);
-    this.camera.lookAt(0, 0, 0);
+    this.panX = 0;
+    this.panZ = 0;
     this.resize();
   }
 
@@ -202,19 +209,37 @@ export class Game {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
     const aspect = w / Math.max(1, h);
-    const pad = 1.06;
-    const halfW = (MAP_SIZE.w / 2) * pad;
-    const halfD = (MAP_SIZE.d / 2) * pad;
-    const s = Math.max(halfD, halfW / aspect);
-    this.viewSize = s;
-    this.camera.left = -s * aspect;
-    this.camera.right = s * aspect;
+    // Cover: fill the landscape width. Crop a little height on wide phones
+    // instead of letterboxing a tiny plate in the center.
+    const coverS = MAP_SIZE.w / 2 / aspect;
+    const fillS = MAP_SIZE.d / 2;
+    this.viewSize = Math.min(coverS, fillS) * 0.98;
+    this.applyView(w, h, aspect);
+    this.renderer.setSize(w, h, false);
+  }
+
+  applyView(w, h, aspect) {
+    const width = w ?? (this.canvas.clientWidth || window.innerWidth);
+    const height = h ?? (this.canvas.clientHeight || window.innerHeight);
+    const a = aspect ?? width / Math.max(1, height);
+    const s = this.viewSize;
+    const viewW = 2 * s * a;
+    const viewH = 2 * s;
+    const maxX = Math.max(0, (MAP_SIZE.w - viewW) / 2 + 0.8);
+    const maxZ = Math.max(0, (MAP_SIZE.d - viewH) / 2 + 0.8);
+    this.panX = Math.max(-maxX, Math.min(maxX, this.panX));
+    this.panZ = Math.max(-maxZ, Math.min(maxZ, this.panZ));
+    this.camera.left = -s * a;
+    this.camera.right = s * a;
     this.camera.top = s;
     this.camera.bottom = -s;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h, false);
-    this.camera.position.set(0, 60, 0.01);
-    this.camera.lookAt(0, 0, 0);
+    this.camera.position.set(this.panX, 60, this.panZ + 0.01);
+    this.camera.lookAt(this.panX, 0, this.panZ);
+  }
+
+  setOrientHold(hold) {
+    this.orientHold = hold;
   }
 
   project(x, z, y = 0.35) {
@@ -227,7 +252,7 @@ export class Game {
   loop = () => {
     requestAnimationFrame(this.loop);
     const dt = Math.min(0.05, this.clock.getDelta());
-    if (this.mode === "playing" && !this.paused && !this.won && !this.lost) {
+    if (this.mode === "playing" && !this.paused && !this.orientHold && !this.won && !this.lost) {
       this.tick(dt * this.speed);
     } else if (this.mode === "menu") {
       this.world.rotation.y = 0;
@@ -829,22 +854,60 @@ export class Game {
     this.emit();
   }
 
-  onPointerDown(event) {
-    if (this.mode !== "playing" || this.won || this.lost) return;
+  groundHit(event) {
     const rect = this.canvas.getBoundingClientRect();
     this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const hit = new THREE.Vector3();
     this.raycaster.ray.intersectPlane(this.groundPlane, hit);
-    if (!hit) return;
+    return hit;
+  }
 
+  onPointerDown(event) {
+    if (this.mode !== "playing" || this.won || this.lost || this.orientHold) return;
+    if (event.target !== this.canvas) return;
+    const hit = this.groundHit(event);
+    if (!hit) return;
+    this.drag = {
+      id: event.pointerId,
+      sx: event.clientX,
+      sy: event.clientY,
+      px: this.panX,
+      pz: this.panZ,
+      hit,
+      moved: false,
+    };
+  }
+
+  onPointerMove(event) {
+    if (!this.drag || event.pointerId !== this.drag.id) return;
+    const dx = event.clientX - this.drag.sx;
+    const dy = event.clientY - this.drag.sy;
+    if (!this.drag.moved && Math.hypot(dx, dy) < 12) return;
+    this.drag.moved = true;
+    const w = this.canvas.clientWidth || window.innerWidth;
+    const h = this.canvas.clientHeight || window.innerHeight;
+    this.panX = this.drag.px - (dx / w) * (this.camera.right - this.camera.left);
+    this.panZ = this.drag.pz - (dy / h) * (this.camera.top - this.camera.bottom);
+    this.applyView();
+  }
+
+  onPointerUp(event) {
+    if (!this.drag || event.pointerId !== this.drag.id) return;
+    const drag = this.drag;
+    this.drag = null;
+    if (drag.moved) return;
+    this.handleTap(drag.hit);
+  }
+
+  handleTap(hit) {
     if (this.aimHero) {
       this.castHero(this.aimHero, hit.x, hit.z);
       return;
     }
 
-    const tower = this.towers.find((t) => Math.hypot(t.x - hit.x, t.z - hit.z) < 1.15);
+    const tower = this.towers.find((t) => Math.hypot(t.x - hit.x, t.z - hit.z) < 1.45);
     if (tower) {
       this.selected = { kind: "tower", id: tower.id };
       this.emit();
@@ -852,7 +915,7 @@ export class Game {
     }
 
     let spotId = -1;
-    let spotD = 1.85;
+    let spotD = 2.25;
     this.map.spots.forEach((p, i) => {
       if (this.towers.some((t) => t.spotId === i)) return;
       const d = Math.hypot(p[0] - hit.x, p[1] - hit.z);
@@ -867,7 +930,7 @@ export class Game {
       return;
     }
 
-    const hero = this.heroes.find((h) => h.hp > 0 && Math.hypot(h.x - hit.x, h.z - hit.z) < 1.1);
+    const hero = this.heroes.find((h) => h.hp > 0 && Math.hypot(h.x - hit.x, h.z - hit.z) < 1.35);
     if (hero) {
       this.selected = { kind: "hero", id: hero.id };
       this.emit();
