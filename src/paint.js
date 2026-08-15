@@ -139,7 +139,7 @@ function toonRamp() {
   c.width = 4;
   c.height = 1;
   const ctx = c.getContext("2d");
-  const shades = ["#5a5348", "#8a8070", "#c4b8a0", "#fff4dc"];
+  const shades = ["#3a3a3a", "#7a7a7a", "#c8c8c8", "#ffffff"];
   shades.forEach((col, i) => {
     ctx.fillStyle = col;
     ctx.fillRect(i, 0, 1, 1);
@@ -191,18 +191,18 @@ export function sharedMat(color, mapName = "cloth") {
   const m = new THREE.MeshToonMaterial({
     color,
     gradientMap: toonRamp(),
-    map: paintMap(mapName),
+    map: mapName === "flat" ? null : paintMap(mapName),
   });
   matCache.set(key, m);
   return m;
 }
 
 const outlineMat = new THREE.MeshBasicMaterial({
-  color: 0x1a120c,
+  color: 0x0c0906,
   side: THREE.BackSide,
 });
 
-export function addOutline(mesh, inflate = 0.075) {
+export function addOutline(mesh, inflate = 0.11) {
   const ol = new THREE.Mesh(mesh.geometry, outlineMat);
   ol.scale.setScalar(1 + inflate);
   ol.raycast = () => {};

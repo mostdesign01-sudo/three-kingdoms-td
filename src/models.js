@@ -214,10 +214,15 @@ function styleCavalry(scale) {
 }
 
 export function makeTower(type, level = 1) {
-  if (type === "ballista") return towerBallista(level);
-  if (type === "thunder") return towerThunder(level);
-  if (type === "barracks") return towerBarracks(level);
-  return towerSage(level);
+  const built = type === "ballista"
+    ? towerBallista(level)
+    : type === "thunder"
+      ? towerThunder(level)
+      : type === "barracks"
+        ? towerBarracks(level)
+        : towerSage(level);
+  built.scale.setScalar(1.42);
+  return built;
 }
 
 function towerBallista(level) {
@@ -319,8 +324,8 @@ function towerSage(level) {
 
 export function makeSpot() {
   const g = new THREE.Group();
-  g.add(p(geo.cyl, 0x8a8478, 0, 0.05, 0, 1.05, 0.1, 1.05, "stone", 0.04));
-  g.add(p(geo.cyl, 0x8a6238, 0, 0.12, 0, 0.82, 0.08, 0.82, "wood", 0.05));
+  g.add(p(geo.cyl, 0x8a8478, 0, 0.06, 0, 1.2, 0.12, 1.2, "stone", 0.04));
+  g.add(p(geo.cyl, 0x8a6238, 0, 0.14, 0, 0.92, 0.1, 0.92, "wood", 0.05));
   for (let i = 0; i < 4; i++) {
     const a = (i / 4) * Math.PI * 2 + 0.4;
     g.add(p(geo.box, 0x5a3a1a, Math.cos(a) * 0.78, 0.22, Math.sin(a) * 0.78, 0.1, 0.28, 0.1, "wood", 0.1));
@@ -372,14 +377,14 @@ export function tree(kind = "puff") {
   const g = new THREE.Group();
   g.add(p(geo.cyl, 0x5a3a1a, 0, 0.4, 0, 0.14, 0.8, 0.14, "wood", 0.1));
   if (kind === "pine") {
-    g.add(p(geo.cone, 0x2f5a32, 0, 1.15, 0, 0.72, 1.05, 0.72, "grass", 0.05));
-    g.add(p(geo.cone, 0x3f7a40, 0, 1.7, 0, 0.5, 0.7, 0.5, "grass", 0.06));
-    g.add(p(geo.cone, 0x5aaa48, 0, 2.1, 0, 0.28, 0.42, 0.28, "grass", 0.08));
+    g.add(p(geo.cone, 0x1f7a32, 0, 1.15, 0, 0.78, 1.1, 0.78, "flat", 0.08));
+    g.add(p(geo.cone, 0x2f9a40, 0, 1.75, 0, 0.55, 0.75, 0.55, "flat", 0.08));
+    g.add(p(geo.cone, 0x5aca48, 0, 2.18, 0, 0.32, 0.46, 0.32, "flat", 0.1));
   } else {
-    g.add(p(geo.sph, 0x2f6a32, 0, 1.15, 0, 0.62, 0.5, 0.62, "grass", 0.05));
-    g.add(p(geo.sph, 0x3f8a3a, 0.28, 1.25, 0.1, 0.42, 0.38, 0.42, "grass", 0.06));
-    g.add(p(geo.sph, 0x4a9a40, -0.22, 1.32, -0.12, 0.38, 0.34, 0.38, "grass", 0.06));
-    g.add(p(geo.sph, 0x6aba50, 0.05, 1.55, 0.05, 0.32, 0.28, 0.32, "grass", 0.07));
+    g.add(p(geo.sph, 0x1f7a32, 0, 1.2, 0, 0.7, 0.55, 0.7, "flat", 0.07));
+    g.add(p(geo.sph, 0x2f9a3a, 0.3, 1.32, 0.12, 0.48, 0.42, 0.48, "flat", 0.08));
+    g.add(p(geo.sph, 0x3aaa40, -0.26, 1.38, -0.14, 0.44, 0.38, 0.44, "flat", 0.08));
+    g.add(p(geo.sph, 0x6ada50, 0.06, 1.62, 0.06, 0.36, 0.32, 0.36, "flat", 0.09));
   }
   return g;
 }

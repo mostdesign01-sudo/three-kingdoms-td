@@ -151,7 +151,7 @@ export class Game {
       const def = HEROES[id];
       const mesh = makeCharacter({
         hero: id,
-        scale: 1.28,
+        scale: 1.42,
       });
       mesh.position.set(p[0], 0, p[1]);
       this.world.add(mesh);
@@ -407,7 +407,7 @@ export class Game {
   }
 
   fireTower(t, target, stats) {
-    const from = new THREE.Vector3(t.x, 1.4, t.z);
+      const from = new THREE.Vector3(t.x, 1.85, t.z);
     const to = new THREE.Vector3(target.x, 0.9, target.z);
     if (t.type === "ballista") {
       this.vfx.bolt(from, to, 0xffe08a);
