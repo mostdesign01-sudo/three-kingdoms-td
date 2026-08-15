@@ -15,10 +15,10 @@ export class VFX {
   bolt(from, to, color = 0xffe08a) {
     const dir = to.clone().sub(from);
     const len = dir.length();
-    const streak = mesh(geo.cyl, mat(color, { emissive: color, emissiveIntensity: 0.9 }), 0, 0, 0, 0.05, len, 0.05);
+    const streak = mesh(geo.cyl, mat(color, { emissive: color, emissiveIntensity: 0.9 }), 0, 0, 0, 0.09, len, 0.09);
     streak.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
     streak.position.copy(from).add(dir.multiplyScalar(0.5));
-    this.spawn(streak, 0.12);
+    this.spawn(streak, 0.2);
   }
 
   boulder(from, to) {
@@ -42,7 +42,7 @@ export class VFX {
 
   explosion(pos, color = 0xff7a2a, size = 1) {
     const burst = mesh(geo.sph, mat(color, { emissive: color, emissiveIntensity: 1, transparent: true, opacity: 0.85, flat: false }), pos.x, pos.y, pos.z, 0.2, 0.2, 0.2);
-    this.spawn(burst, 0.35, (it) => {
+    this.spawn(burst, 0.42, (it) => {
       const k = 1 - it.life / it.max;
       const s = size * (0.3 + k * 1.6);
       it.node.scale.setScalar(s);
