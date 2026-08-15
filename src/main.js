@@ -9,21 +9,27 @@ const els = {
   hud: document.querySelector("#hud"),
   overlay: document.querySelector("#overlay"),
   mapList: document.querySelector("#map-list"),
-  gold: document.querySelector("#stat-gold"),
-  lives: document.querySelector("#stat-lives"),
-  wave: document.querySelector("#stat-wave"),
+  gold: document.querySelector("#stat-gold b"),
+  lives: document.querySelector("#stat-lives b"),
+  wave: document.querySelector("#stat-wave b"),
   toast: document.querySelector("#toast"),
   banner: document.querySelector("#banner"),
   hint: document.querySelector("#spot-hint"),
-  build: document.querySelector("#build-panel"),
-  buildTitle: document.querySelector("#build-title"),
-  buildActions: document.querySelector("#build-actions"),
+  wheel: document.querySelector("#wheel"),
   heroes: document.querySelector("#hero-bar"),
   waveBtn: document.querySelector("#btn-wave"),
+  waveLabel: document.querySelector("#btn-wave-label"),
   speedBtn: document.querySelector("#btn-speed"),
   pauseBtn: document.querySelector("#btn-pause"),
   overlayTitle: document.querySelector("#overlay-title"),
   overlayText: document.querySelector("#overlay-text"),
+};
+
+const ICONS = {
+  ballista: "弩",
+  thunder: "石",
+  barracks: "营",
+  sage: "谋",
 };
 
 function renderMenu(view) {
@@ -42,52 +48,82 @@ function setHidden(el, hidden) {
   el.classList.toggle("hidden", hidden);
 }
 
-function renderBuild(view) {
-  els.buildActions.innerHTML = "";
+function clampWheel(x, y) {
+  const pad = 120;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  return {
+    x: Math.max(pad, Math.min(w - pad, x)),
+    y: Math.max(pad + 40, Math.min(h - 160, y)),
+  };
+}
+
+function slotStyle(i, n) {
+  const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
+  const r = 78;
+  return `left:${110 + Math.cos(a) * r}px;top:${110 + Math.sin(a) * r}px`;
+}
+
+function renderWheel(view) {
+  els.wheel.innerHTML = "";
   if (view.build) {
-    els.buildTitle.textContent = "营建箭楼";
-    setHidden(els.build, false);
-    for (const t of Object.values(view.towers)) {
+    const p = clampWheel(view.build.x, view.build.y);
+    els.wheel.style.left = `${p.x}px`;
+    els.wheel.style.top = `${p.y}px`;
+    setHidden(els.wheel, false);
+    Object.values(view.towers).forEach((t, i) => {
       const btn = document.createElement("button");
-      btn.className = "tower-btn";
+      btn.className = `wheel-slot ${t.id}`;
       btn.type = "button";
+      btn.style.cssText = slotStyle(i, 4);
       btn.disabled = view.gold < t.cost;
-      btn.innerHTML = `<b>${t.name}</b><small>${t.cost} 金</small><small>${t.desc}</small>`;
+      btn.innerHTML = `<span class="mark"></span><b>${t.name}</b><small>${t.cost}</small>`;
       btn.addEventListener("click", () => game.placeTower(view.build.spotId, t.id));
-      els.buildActions.appendChild(btn);
-    }
+      els.wheel.appendChild(btn);
+    });
     return;
   }
   if (view.towerPanel) {
-    const p = view.towerPanel;
-    els.buildTitle.textContent = `${p.name} · ${["", "初成", "精锐", "神威"][p.level]}`;
-    setHidden(els.build, false);
-    if (p.canUpgrade) {
-      const up = document.createElement("button");
-      up.className = "tower-btn";
-      up.type = "button";
-      up.disabled = view.gold < p.upgradeCost;
-      up.innerHTML = `<b>升级</b><small>${p.upgradeCost} 金</small>`;
-      up.addEventListener("click", () => game.upgradeSelected());
-      els.buildActions.appendChild(up);
+    const p = clampWheel(view.towerPanel.x, view.towerPanel.y);
+    els.wheel.style.left = `${p.x}px`;
+    els.wheel.style.top = `${p.y}px`;
+    setHidden(els.wheel, false);
+    const items = [];
+    if (view.towerPanel.canUpgrade) {
+      items.push({
+        cls: "up",
+        html: `<span class="mark"></span><b>升级</b><small>${view.towerPanel.upgradeCost}</small>`,
+        disabled: view.gold < view.towerPanel.upgradeCost,
+        on: () => game.upgradeSelected(),
+      });
     }
-    const sell = document.createElement("button");
-    sell.className = "tower-btn";
-    sell.type = "button";
-    sell.innerHTML = `<b>拆除</b><small>回 ${p.sell} 金</small>`;
-    sell.addEventListener("click", () => game.sellSelected());
-    els.buildActions.appendChild(sell);
-    if (p.barracks) {
-      const tip = document.createElement("button");
-      tip.className = "tower-btn";
-      tip.type = "button";
-      tip.disabled = true;
-      tip.innerHTML = `<b>集结</b><small>再点地面</small>`;
-      els.buildActions.appendChild(tip);
+    items.push({
+      cls: "sell",
+      html: `<span class="mark"></span><b>拆除</b><small>${view.towerPanel.sell}</small>`,
+      disabled: false,
+      on: () => game.sellSelected(),
+    });
+    if (view.towerPanel.barracks) {
+      items.push({
+        cls: "barracks",
+        html: `<span class="mark"></span><b>集结</b><small>点地</small>`,
+        disabled: true,
+        on: () => {},
+      });
     }
+    items.forEach((it, i) => {
+      const btn = document.createElement("button");
+      btn.className = `wheel-slot ${it.cls}`;
+      btn.type = "button";
+      btn.style.cssText = slotStyle(i, items.length);
+      btn.disabled = it.disabled;
+      btn.innerHTML = it.html;
+      btn.addEventListener("click", it.on);
+      els.wheel.appendChild(btn);
+    });
     return;
   }
-  setHidden(els.build, true);
+  setHidden(els.wheel, true);
 }
 
 function renderHeroes(view) {
@@ -95,7 +131,7 @@ function renderHeroes(view) {
     els.heroes.innerHTML = "";
     for (const h of view.heroes) {
       const btn = document.createElement("button");
-      btn.className = "hero-btn";
+      btn.className = `hero-btn ${h.id}`;
       btn.type = "button";
       btn.dataset.id = h.id;
       btn.addEventListener("click", () => game.beginHeroSkill(h.id));
@@ -106,12 +142,12 @@ function renderHeroes(view) {
   for (const h of view.heroes) {
     const btn = els.heroes.querySelector(`[data-id="${h.id}"]`);
     if (!btn) continue;
-    const ready = h.ready ? "可放" : h.dead ? "休整" : `冷却 ${Math.ceil(h.cd)}s`;
+    const ready = h.ready ? "可放" : h.dead ? "休整" : `${Math.ceil(h.cd)}s`;
     btn.classList.toggle("aiming", view.aimHero === h.id);
     btn.classList.toggle("ready", h.ready);
     btn.disabled = !h.ready && view.aimHero !== h.id;
     const pct = h.maxCd ? Math.round((1 - h.cd / h.maxCd) * 100) : 100;
-    btn.innerHTML = `<b>${h.name}</b><small>${h.skill}</small><small>${ready}</small><div class="cd"><i style="width:${pct}%"></i></div>`;
+    btn.innerHTML = `<div class="face"></div><b>${h.name}</b><small>${h.skill} · ${ready}</small><i class="cd-ring" style="--cd:${pct}"></i>`;
   }
 }
 
@@ -129,14 +165,14 @@ game.on((view) => {
   setHidden(els.hud, false);
   setHidden(els.overlay, !(view.won || view.lost));
 
-  els.gold.textContent = `金 ${view.gold}`;
-  els.lives.textContent = `城 ${view.lives}`;
-  els.wave.textContent = `波次 ${view.wave}/${view.waveTotal}`;
+  els.gold.textContent = view.gold;
+  els.lives.textContent = view.lives;
+  els.wave.textContent = `${view.wave}/${view.waveTotal}`;
   els.speedBtn.textContent = `×${view.speed}`;
-  els.pauseBtn.textContent = view.paused ? "继续" : "暂停";
+  els.pauseBtn.textContent = view.paused ? "续" : "停";
   els.waveBtn.disabled = !view.pendingWave || view.won || view.lost;
-  els.waveBtn.textContent = view.waveActive
-    ? "交战中"
+  els.waveLabel.textContent = view.waveActive
+    ? "交战"
     : view.wave >= view.waveTotal
       ? "已尽"
       : view.wave === 0
@@ -151,7 +187,7 @@ game.on((view) => {
   });
   if (panelKey !== lastPanelKey) {
     lastPanelKey = panelKey;
-    renderBuild(view);
+    renderWheel(view);
   }
 
   renderHeroes(view);
@@ -189,3 +225,4 @@ document.querySelector("#btn-retry").addEventListener("click", () => {
 document.querySelector("#btn-home").addEventListener("click", () => game.backToMenu());
 
 game.emit();
+void ICONS;

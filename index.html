@@ -8,66 +8,78 @@
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#1a0f0a" />
+    <meta name="theme-color" content="#1a1208" />
     <title>三国保卫战 · 烽火三国塔防</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%231a0f0a' width='64' height='64' rx='10'/%3E%3Cpath fill='%23c9a227' d='M18 48 V22 l14-10 14 10 v26 H18z'/%3E%3Ccircle fill='%238b1e1e' cx='32' cy='30' r='6'/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect fill='%231a1208' width='64' height='64' rx='10'/%3E%3Cpath fill='%23c9a227' d='M18 48 V22 l14-10 14 10 v26 H18z'/%3E%3Ccircle fill='%238b1e1e' cx='32' cy='30' r='6'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@600;700&display=swap"
       rel="stylesheet"
     />
   </head>
   <body>
     <div id="app">
       <canvas id="view"></canvas>
+      <div class="vignette"></div>
 
       <div id="ui">
         <section id="menu" class="screen">
-          <div class="menu-seal">漢</div>
-          <h1 class="title">三国保卫战</h1>
-          <p class="subtitle">烽火三国塔防</p>
-          <p class="blurb">选一处关隘布防。敌军八波来犯，末波乃吕布幻影。</p>
-          <div id="map-list" class="map-list"></div>
+          <div class="menu-frame">
+            <div class="title-banner">
+              <h1 class="title">三国保卫战</h1>
+              <p class="subtitle">烽火三国塔防</p>
+            </div>
+            <p class="blurb">选一处关隘布防。敌军八波来犯，末波乃吕布幻影。</p>
+            <div id="map-list" class="map-list"></div>
+          </div>
         </section>
 
         <section id="hud" class="hud hidden">
-          <header class="top-bar">
-            <button id="btn-menu" class="icon-btn" type="button">返回</button>
-            <div class="stat gold" id="stat-gold">金 0</div>
-            <div class="stat lives" id="stat-lives">城 20</div>
-            <div class="stat wave" id="stat-wave">波次 0/8</div>
+          <header class="kr-top">
+            <button id="btn-menu" class="wood-round" type="button" aria-label="返回">
+              <span class="glyph">返</span>
+            </button>
+            <div class="plaque gold" id="stat-gold">
+              <span class="ico coin"></span>
+              <b>0</b>
+            </div>
+            <div class="plaque lives" id="stat-lives">
+              <span class="ico heart"></span>
+              <b>20</b>
+            </div>
+            <div class="plaque wave" id="stat-wave">
+              <span class="ico flag"></span>
+              <b>0/8</b>
+            </div>
           </header>
 
           <div id="toast" class="toast hidden"></div>
           <div id="banner" class="banner hidden"></div>
+          <div id="spot-hint" class="spot-hint hidden">点选石台建造营垒</div>
 
-          <div id="spot-hint" class="spot-hint hidden">点选空地建造箭楼</div>
+          <div id="wheel" class="kr-wheel hidden"></div>
 
-          <div class="bottom-stack">
-            <div id="build-panel" class="panel hidden">
-              <div class="panel-title" id="build-title">营建</div>
-              <div id="build-actions" class="action-row"></div>
+          <footer class="kr-dock">
+            <div id="hero-bar" class="hero-bar"></div>
+            <div class="util-bar">
+              <button id="btn-wave" class="horn-btn" type="button">
+                <span class="horn"></span>
+                <b id="btn-wave-label">出兵</b>
+              </button>
+              <button id="btn-speed" class="wood-round sm" type="button">×1</button>
+              <button id="btn-pause" class="wood-round sm" type="button">暂停</button>
             </div>
-
-            <div class="dock">
-              <div id="hero-bar" class="hero-bar"></div>
-              <div class="util-bar">
-                <button id="btn-wave" class="primary" type="button">出兵</button>
-                <button id="btn-speed" class="icon-btn" type="button">×1</button>
-                <button id="btn-pause" class="icon-btn" type="button">暂停</button>
-              </div>
-            </div>
-          </div>
+          </footer>
         </section>
 
         <section id="overlay" class="screen overlay hidden">
-          <div class="overlay-card">
+          <div class="scroll-card">
             <h2 id="overlay-title">胜负已分</h2>
             <p id="overlay-text"></p>
             <div class="overlay-actions">
-              <button id="btn-retry" class="primary" type="button">再守此关</button>
-              <button id="btn-home" class="icon-btn" type="button">返回选关</button>
+              <button id="btn-retry" class="horn-btn" type="button"><b>再守此关</b></button>
+              <button id="btn-home" class="wood-round" type="button">选关</button>
             </div>
           </div>
         </section>

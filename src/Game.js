@@ -41,7 +41,10 @@ export class Game {
     this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 160);
+    this.viewSize = 17;
+    this.camera = new THREE.OrthographicCamera(-17, 17, 17, -17, 0.1, 200);
+    this.camera.position.set(20, 26, 20);
+    this.camera.lookAt(0, 0, 0);
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
@@ -49,13 +52,13 @@ export class Game {
       powerPreference: "high-performance",
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.setClearColor(0x120a07, 1);
+    this.renderer.setClearColor(0x4a7a32, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    this.hemi = new THREE.HemisphereLight(0xffd8a8, 0x4a3018, 0.85);
-    this.sun = new THREE.DirectionalLight(0xffc078, 1.15);
-    this.sun.position.set(14, 20, 8);
-    this.scene.add(this.hemi, this.sun, new THREE.AmbientLight(0xffffff, 0.18));
+    this.hemi = new THREE.HemisphereLight(0xfff0c8, 0x3d5a28, 0.95);
+    this.sun = new THREE.DirectionalLight(0xffe2a8, 0.8);
+    this.sun.position.set(12, 28, 10);
+    this.scene.add(this.hemi, this.sun, new THREE.AmbientLight(0xfff6e0, 0.32));
 
     this.vfx = new VFX(this.scene);
     this.world = new THREE.Group();
@@ -104,7 +107,7 @@ export class Game {
     this.clearWorld();
     this.applyTheme(MAPS[0].theme);
     decorateMap(this.world, MAPS[0]);
-    this.world.add(makePathRibbon(MAPS[0].path, MAPS[0].theme.path));
+    this.world.add(makePathRibbon(MAPS[0].path, MAPS[0].theme.path, MAPS[0].theme.pathStyle));
     this.frameMap();
   }
 
@@ -123,7 +126,7 @@ export class Game {
     this.clearWorld();
     this.applyTheme(map.theme);
     decorateMap(this.world, map);
-    this.world.add(makePathRibbon(map.path, map.theme.path));
+    this.world.add(makePathRibbon(map.path, map.theme.path, map.theme.pathStyle));
 
     const start = this.path.at(0);
     const end = this.path.at(this.path.length);
@@ -147,15 +150,13 @@ export class Game {
       const id = ["guanyu", "zhaoyun", "zhuge"][i];
       const def = HEROES[id];
       const mesh = makeCharacter({
-        cloth: def.color,
-        body: 0x4a2a1a,
         hero: id,
-        scale: 1.15,
+        scale: 1.28,
       });
       mesh.position.set(p[0], 0, p[1]);
       this.world.add(mesh);
       const hp = makeHpBar();
-      hp.position.set(p[0], 2.1, p[1]);
+      hp.position.set(p[0], 2.45, p[1]);
       this.world.add(hp);
       const blob = makeBlob(0x111111, 1.1);
       blob.position.set(p[0], 0, p[1]);
@@ -185,7 +186,7 @@ export class Game {
   }
 
   applyTheme(theme) {
-    this.scene.background = new THREE.Color(theme.fog).multiplyScalar(0.35);
+    this.scene.background = new THREE.Color(theme.fog);
     this.scene.fog = new THREE.Fog(theme.fog, theme.fogNear, theme.fogFar);
     this.hemi.color.setHex(theme.hemiSky);
     this.hemi.groundColor.setHex(theme.hemiGround);
@@ -204,19 +205,31 @@ export class Game {
   }
 
   frameMap() {
-    this.camera.position.set(0, 26, 22);
+    this.camera.position.set(20, 26, 20);
     this.camera.lookAt(0, 0, 0);
   }
 
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
-    this.camera.aspect = w / h;
+    const aspect = w / Math.max(1, h);
+    const s = h > w ? 21 : 16.5;
+    this.viewSize = s;
+    this.camera.left = -s * aspect;
+    this.camera.right = s * aspect;
+    this.camera.top = s;
+    this.camera.bottom = -s;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
-    const portrait = h > w;
-    this.camera.position.set(0, portrait ? 32 : 26, portrait ? 26 : 22);
+    this.camera.position.set(20, 26, 20);
     this.camera.lookAt(0, 0, 0);
+  }
+
+  project(x, z, y = 0.35) {
+    const v = new THREE.Vector3(x, y, z).project(this.camera);
+    const w = this.canvas.clientWidth || window.innerWidth;
+    const h = this.canvas.clientHeight || window.innerHeight;
+    return { x: (v.x * 0.5 + 0.5) * w, y: (-v.y * 0.5 + 0.5) * h };
   }
 
   loop = () => {
@@ -225,7 +238,7 @@ export class Game {
     if (this.mode === "playing" && !this.paused && !this.won && !this.lost) {
       this.tick(dt * this.speed);
     } else if (this.mode === "menu") {
-      this.world.rotation.y += dt * 0.04;
+      this.world.rotation.y = Math.sin(performance.now() * 0.00012) * 0.06;
     }
     this.vfx.update(dt);
     this.bobDecor(dt);
@@ -287,9 +300,7 @@ export class Game {
     const hero = type === "boss" ? "lubu" : null;
     const weapon = type === "armored" ? "shield" : type === "cavalry" ? "horse" : "spear";
     const mesh = makeCharacter({
-      cloth: def.color,
-      body: 0x3a2a20,
-      helm: type === "boss" ? 0xc9a227 : 0x8a8a8a,
+      kind: type,
       scale: def.scale,
       weapon,
       hero,
@@ -353,7 +364,7 @@ export class Game {
       e.z = p.z;
       e.mesh.position.set(p.x, 0, p.z);
       e.mesh.lookAt(p.x + p.nx, 0, p.z + p.nz);
-      e.hpBar.position.set(p.x, 1.7 * e.def.scale + 0.4, p.z);
+      e.hpBar.position.set(p.x, 1.85 * e.def.scale + 0.55, p.z);
       e.blob.position.set(p.x, 0, p.z);
       setHpBar(e.hpBar, e.hp / e.maxHp);
     }
@@ -428,10 +439,8 @@ export class Game {
 
   spawnSoldier(tower, stats) {
     const mesh = makeCharacter({
-      cloth: 0x8b1e1e,
-      body: 0x4a2a1a,
-      helm: 0xc9a227,
-      scale: 0.92,
+      kind: "soldier",
+      scale: 0.95,
       weapon: "spear",
     });
     mesh.position.set(tower.x, 0, tower.z);
@@ -507,7 +516,7 @@ export class Game {
       }
       s.mesh.position.set(s.x, 0, s.z);
       if (target) s.mesh.lookAt(target.x, 0, target.z);
-      s.hpBar.position.set(s.x, 1.7, s.z);
+      s.hpBar.position.set(s.x, 1.9, s.z);
       s.blob.position.set(s.x, 0, s.z);
       setHpBar(s.hpBar, s.hp / s.maxHp);
     }
@@ -557,7 +566,7 @@ export class Game {
       h.mesh.position.set(h.x, 0, h.z);
       if (foe) h.mesh.lookAt(foe.x, 0, foe.z);
       else if (h.move) h.mesh.lookAt(h.move.x, 0, h.move.z);
-      h.hpBar.position.set(h.x, 2.15, h.z);
+      h.hpBar.position.set(h.x, 2.5, h.z);
       h.blob.position.set(h.x, 0, h.z);
       setHpBar(h.hpBar, h.hp / h.def.hp);
     }
@@ -935,7 +944,12 @@ export class Game {
         ready: h.cd <= 0 && h.hp > 0 && h.respawn <= 0,
         dead: h.hp <= 0 || h.respawn > 0,
       })),
-      build: this.selected?.kind === "spot" ? { spotId: this.selected.id } : null,
+      build: this.selected?.kind === "spot"
+        ? {
+            spotId: this.selected.id,
+            ...this.project(this.map.spots[this.selected.id][0], this.map.spots[this.selected.id][1]),
+          }
+        : null,
       towerPanel: t
         ? {
             name: def.name,
@@ -944,6 +958,7 @@ export class Game {
             upgradeCost: next?.cost ?? 0,
             sell: Math.floor(invested(t) * SELL_RATIO),
             barracks: t.type === "barracks",
+            ...this.project(t.x, t.z),
           }
         : null,
     };
