@@ -213,7 +213,7 @@ export class Game {
     // instead of letterboxing a tiny plate in the center.
     const coverS = MAP_SIZE.w / 2 / aspect;
     const fillS = MAP_SIZE.d / 2;
-    this.viewSize = Math.min(coverS, fillS) * 0.98;
+    this.viewSize = Math.min(coverS, fillS) * 0.94;
     this.applyView(w, h, aspect);
     this.renderer.setSize(w, h, false);
   }
@@ -860,8 +860,7 @@ export class Game {
     this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const hit = new THREE.Vector3();
-    this.raycaster.ray.intersectPlane(this.groundPlane, hit);
-    return hit;
+    return this.raycaster.ray.intersectPlane(this.groundPlane, hit);
   }
 
   onPointerDown(event) {

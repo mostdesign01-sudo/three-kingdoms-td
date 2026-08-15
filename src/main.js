@@ -69,18 +69,20 @@ function setHidden(el, hidden) {
 }
 
 function isPortrait() {
-  return window.innerHeight > window.innerWidth + 8;
+  return window.matchMedia("(orientation: portrait)").matches
+    || window.innerHeight > window.innerWidth + 16;
 }
 
 function syncOrientation() {
   const portrait = isPortrait();
   rotate.classList.toggle("hidden", !portrait);
   game?.setOrientHold(portrait);
-  try {
-    screen.orientation?.lock?.("landscape");
-  } catch {
-    /* browsers only allow this in fullscreen / installed PWA */
-  }
+}
+
+function tryLockLandscape() {
+  const lock = screen.orientation?.lock;
+  if (typeof lock !== "function") return;
+  Promise.resolve(lock.call(screen.orientation, "landscape")).catch(() => {});
 }
 
 function clampWheel(x, y) {
@@ -244,6 +246,7 @@ function onView(view) {
 async function enterMap(id) {
   if (!game || entering) return;
   entering = true;
+  tryLockLandscape();
   setLoading(false, "点兵 0/8");
   try {
     await game.startMap(id, (done, total) => {
