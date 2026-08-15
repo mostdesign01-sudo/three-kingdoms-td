@@ -165,6 +165,8 @@ export class Game {
         def,
         x: p[0],
         z: p[1],
+        homeX: p[0],
+        homeZ: p[1],
         hp: def.hp,
         cd: 0,
         atk: 0,
@@ -482,12 +484,12 @@ export class Game {
         continue;
       }
       const stats = towerStats(tower);
+      const rally = { x: tower.rallyX, z: tower.rallyZ };
       let target = this.enemies.find((e) => e.id === s.target);
-      if (!target || dist2(s, target) > stats.range + 1.2) {
-        target = this.nearest(s.x, s.z, stats.range, (e) => !e.blocked || e.blocked === s.id);
+      if (!target || dist2(rally, target) > stats.range) {
+        target = this.nearest(rally.x, rally.z, stats.range, (e) => !e.blocked || e.blocked === s.id);
         s.target = target?.id ?? null;
       }
-      const rally = { x: tower.rallyX, z: tower.rallyZ };
       if (target) {
         this.steer(s, target, 2.6, dt);
         if (dist2(s, target) < 0.85) {
@@ -530,10 +532,17 @@ export class Game {
       }
       if (h.move) {
         this.steer(h, h.move, h.def.speed, dt);
-        if (dist2(h, h.move) < 0.25) h.move = null;
+        if (dist2(h, h.move) < 0.25) {
+          h.homeX = h.move.x;
+          h.homeZ = h.move.z;
+          h.move = null;
+        }
       } else {
-        const target = this.nearest(h.x, h.z, h.def.range + 3.5);
+        const target = this.nearest(h.x, h.z, h.def.range + 1.3);
         if (target) this.steer(h, target, h.def.speed * 0.7, dt);
+        else if (dist2(h, { x: h.homeX, z: h.homeZ }) > 0.2) {
+          this.steer(h, { x: h.homeX, z: h.homeZ }, h.def.speed * 0.55, dt);
+        }
       }
       const foe = this.nearest(h.x, h.z, h.def.range);
       h.atk -= dt;
