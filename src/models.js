@@ -86,6 +86,36 @@ export function makeSpot() {
   return makeDecal(tex(ART.pad), 1.85);
 }
 
+export function makeRangeRing() {
+  const group = new THREE.Group();
+  const fill = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 48),
+    new THREE.MeshBasicMaterial({
+      color: 0x5ad66a,
+      transparent: true,
+      opacity: 0.16,
+      depthWrite: false,
+    }),
+  );
+  fill.rotation.x = -Math.PI / 2;
+  const edge = new THREE.Mesh(
+    new THREE.RingGeometry(0.96, 1, 48),
+    new THREE.MeshBasicMaterial({
+      color: 0x8cff7a,
+      transparent: true,
+      opacity: 0.55,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  edge.rotation.x = -Math.PI / 2;
+  edge.position.y = 0.01;
+  group.add(fill, edge);
+  group.position.y = 0.05;
+  group.visible = false;
+  return group;
+}
+
 export function makeHpBar() {
   const canvas = document.createElement("canvas");
   canvas.width = 128;

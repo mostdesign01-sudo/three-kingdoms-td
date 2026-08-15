@@ -16,6 +16,7 @@ import {
   makeBlob,
   makeCharacter,
   makeHpBar,
+  makeRangeRing,
   makeSpot,
   makeTower,
   setHpBar,
@@ -85,8 +86,32 @@ export class Game {
   }
 
   emit() {
+    this.syncSelectionFx();
     const view = this.view();
     for (const fn of this.listeners) fn(view);
+  }
+
+  clearSelected() {
+    this.selected = null;
+    this.aimHero = null;
+    this.emit();
+  }
+
+  syncSelectionFx() {
+    if (!this.rangeRing) return;
+    const t = this.selectedTower();
+    if (t) {
+      const stats = towerStats(t);
+      this.rangeRing.visible = true;
+      this.rangeRing.position.set(t.x, 0.05, t.z);
+      this.rangeRing.scale.setScalar(stats.range);
+    } else {
+      this.rangeRing.visible = false;
+    }
+    this.spotMeshes?.forEach((m, i) => {
+      const on = this.selected?.kind === "spot" && this.selected.id === i;
+      m.scale.setScalar(on ? 1.14 : 1);
+    });
   }
 
   resetPlayState() {
@@ -174,8 +199,9 @@ export class Game {
       };
     });
 
+    this.rangeRing = makeRangeRing();
+    this.world.add(this.rangeRing);
     this.frameMap();
-    this.toast("点空地建塔，点英雄技后再点地面施放");
     this.banner(map.name);
     this.emit();
   }
@@ -197,6 +223,7 @@ export class Game {
       this.world.remove(child);
     }
     this.spotMeshes = [];
+    this.rangeRing = null;
   }
 
   frameMap() {
@@ -710,7 +737,7 @@ export class Game {
     };
     this.towers.push(tower);
     this.spotMeshes[spotId].visible = false;
-    this.selected = { kind: "tower", id: tower.id };
+    this.selected = null;
     this.emit();
   }
 
@@ -745,7 +772,7 @@ export class Game {
     }
     this.soldiers = this.soldiers.filter((s) => s.towerId !== t.id);
     this.spotMeshes[t.spotId].visible = true;
-    this.selected = { kind: "spot", id: t.spotId };
+    this.selected = null;
     this.emit();
   }
 

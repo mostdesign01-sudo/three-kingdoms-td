@@ -46,6 +46,7 @@ const els = {
 let game;
 let lastPanelKey = "";
 let entering = false;
+let sellArmed = false;
 
 function setLoading(hidden, text) {
   if (text && loadingText) loadingText.textContent = text;
@@ -99,6 +100,14 @@ function slotStyle(i, n) {
   return `left:${130 + Math.cos(a) * r}px;top:${130 + Math.sin(a) * r}px`;
 }
 
+function addHub() {
+  const hub = document.createElement("button");
+  hub.className = "wheel-hub";
+  hub.type = "button";
+  hub.addEventListener("click", () => game.clearSelected());
+  els.wheel.appendChild(hub);
+}
+
 function renderWheel(view) {
   els.wheel.innerHTML = "";
   if (view.build) {
@@ -106,7 +115,7 @@ function renderWheel(view) {
     els.wheel.style.left = `${p.x}px`;
     els.wheel.style.top = `${p.y}px`;
     setHidden(els.wheel, false);
-    els.wheel.innerHTML = `<div class="wheel-hub"></div>`;
+    addHub();
     Object.values(view.towers).forEach((t, i) => {
       const btn = document.createElement("button");
       btn.className = `wheel-slot ${t.id}`;
@@ -124,26 +133,36 @@ function renderWheel(view) {
     els.wheel.style.left = `${p.x}px`;
     els.wheel.style.top = `${p.y}px`;
     setHidden(els.wheel, false);
-    els.wheel.innerHTML = `<div class="wheel-hub"></div>`;
+    addHub();
     const items = [];
     if (view.towerPanel.canUpgrade) {
       items.push({
+        cls: "up",
         html: `<b>升级</b><small>${view.towerPanel.upgradeCost}</small>`,
         disabled: view.gold < view.towerPanel.upgradeCost,
-        on: () => game.upgradeSelected(),
+        on: () => {
+          sellArmed = false;
+          game.upgradeSelected();
+        },
       });
     }
     items.push({
-      html: `<b>拆除</b><small>${view.towerPanel.sell}</small>`,
+      cls: sellArmed ? "sell confirm" : "sell",
+      html: sellArmed ? `<b>确认</b><small>拆除</small>` : `<b>拆除</b><small>${view.towerPanel.sell}</small>`,
       disabled: false,
-      on: () => game.sellSelected(),
+      on: () => {
+        if (!sellArmed) {
+          sellArmed = true;
+          renderWheel(view);
+          return;
+        }
+        sellArmed = false;
+        game.sellSelected();
+      },
     });
-    if (view.towerPanel.barracks) {
-      items.push({ html: `<b>集结</b><small>点地</small>`, disabled: true, on: () => {} });
-    }
     items.forEach((it, i) => {
       const btn = document.createElement("button");
-      btn.className = "wheel-slot";
+      btn.className = `wheel-slot ${it.cls}`;
       btn.type = "button";
       btn.style.cssText = slotStyle(i, items.length);
       btn.disabled = it.disabled;
@@ -199,14 +218,10 @@ function onView(view) {
   els.wave.textContent = `${view.wave}/${view.waveTotal}`;
   els.speedBtn.textContent = `×${view.speed}`;
   els.pauseBtn.textContent = view.paused ? "续" : "停";
-  els.waveBtn.disabled = !view.pendingWave || view.won || view.lost;
-  els.waveLabel.textContent = view.waveActive
-    ? "交战"
-    : view.wave >= view.waveTotal
-      ? "已尽"
-      : view.wave === 0
-        ? "出兵"
-        : "下一波";
+  const canCall = view.pendingWave && !view.won && !view.lost;
+  els.waveBtn.disabled = !canCall;
+  setHidden(els.waveBtn, !canCall);
+  els.waveLabel.textContent = view.wave === 0 ? "出兵" : "下一波";
 
   const panelKey = JSON.stringify({
     s: view.selected,
@@ -216,6 +231,7 @@ function onView(view) {
   });
   if (panelKey !== lastPanelKey) {
     lastPanelKey = panelKey;
+    sellArmed = false;
     renderWheel(view);
   }
 
