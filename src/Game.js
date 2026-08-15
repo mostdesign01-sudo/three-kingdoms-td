@@ -8,15 +8,14 @@ import {
   TOWERS,
   WAVES,
 } from "./content.js";
+import { MAP_SIZE } from "./art.js";
 import { MAPS, buildPath, getMap } from "./maps.js";
 import {
   decorateMap,
+  faceSprite,
   makeBlob,
   makeCharacter,
-  makeGate,
   makeHpBar,
-  makePathRibbon,
-  makePortal,
   makeSpot,
   makeTower,
   setHpBar,
@@ -41,9 +40,9 @@ export class Game {
     this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
     this.scene = new THREE.Scene();
-    this.viewSize = 17;
-    this.camera = new THREE.OrthographicCamera(-17, 17, 17, -17, 0.1, 200);
-    this.camera.position.set(20, 26, 20);
+    this.viewSize = 14;
+    this.camera = new THREE.OrthographicCamera(-14, 14, 14, -14, 0.1, 200);
+    this.camera.position.set(0, 60, 0.01);
     this.camera.lookAt(0, 0, 0);
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -52,7 +51,7 @@ export class Game {
       powerPreference: "high-performance",
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.setClearColor(0x4a7a32, 1);
+    this.renderer.setClearColor(0x120c08, 1);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     this.hemi = new THREE.HemisphereLight(0xfff0c8, 0x3d5a28, 0.95);
@@ -107,7 +106,6 @@ export class Game {
     this.clearWorld();
     this.applyTheme(MAPS[0].theme);
     decorateMap(this.world, MAPS[0]);
-    this.world.add(makePathRibbon(MAPS[0].path, MAPS[0].theme.path, MAPS[0].theme.pathStyle));
     this.frameMap();
   }
 
@@ -126,21 +124,10 @@ export class Game {
     this.clearWorld();
     this.applyTheme(map.theme);
     decorateMap(this.world, map);
-    this.world.add(makePathRibbon(map.path, map.theme.path, map.theme.pathStyle));
-
-    const start = this.path.at(0);
-    const end = this.path.at(this.path.length);
-    const portal = makePortal();
-    portal.position.set(start.x, 0, start.z);
-    this.world.add(portal);
-    const gate = makeGate();
-    gate.position.set(end.x, 0, end.z);
-    gate.lookAt(start.x, 0, start.z);
-    this.world.add(gate);
 
     this.spotMeshes = map.spots.map((p, i) => {
       const m = makeSpot(true);
-      m.position.set(p[0], 0, p[1]);
+      m.position.set(p[0], 0.03, p[1]);
       m.userData.spotId = i;
       this.world.add(m);
       return m;
@@ -151,12 +138,12 @@ export class Game {
       const def = HEROES[id];
       const mesh = makeCharacter({
         hero: id,
-        scale: 1.42,
+        scale: 1,
       });
       mesh.position.set(p[0], 0, p[1]);
       this.world.add(mesh);
       const hp = makeHpBar();
-      hp.position.set(p[0], 2.45, p[1]);
+      hp.position.set(p[0], mesh.userData.height + 0.12, p[1]);
       this.world.add(hp);
       const blob = makeBlob(0x111111, 1.1);
       blob.position.set(p[0], 0, p[1]);
@@ -186,13 +173,13 @@ export class Game {
   }
 
   applyTheme(theme) {
-    this.scene.background = new THREE.Color(theme.fog);
-    this.scene.fog = new THREE.Fog(theme.fog, theme.fogNear, theme.fogFar);
+    this.scene.background = new THREE.Color(0x120c08);
+    this.scene.fog = null;
     this.hemi.color.setHex(theme.hemiSky);
     this.hemi.groundColor.setHex(theme.hemiGround);
     this.sun.color.setHex(theme.sun);
     this.sun.position.set(...theme.sunDir);
-    this.renderer.setClearColor(theme.fog, 1);
+    this.renderer.setClearColor(0x120c08, 1);
   }
 
   clearWorld() {
@@ -205,15 +192,19 @@ export class Game {
   }
 
   frameMap() {
-    this.camera.position.set(20, 26, 20);
+    this.camera.position.set(0, 60, 0.01);
     this.camera.lookAt(0, 0, 0);
+    this.resize();
   }
 
   resize() {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
     const aspect = w / Math.max(1, h);
-    const s = h > w ? 21 : 16.5;
+    const pad = 1.06;
+    const halfW = (MAP_SIZE.w / 2) * pad;
+    const halfD = (MAP_SIZE.d / 2) * pad;
+    const s = Math.max(halfD, halfW / aspect);
     this.viewSize = s;
     this.camera.left = -s * aspect;
     this.camera.right = s * aspect;
@@ -221,7 +212,7 @@ export class Game {
     this.camera.bottom = -s;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
-    this.camera.position.set(20, 26, 20);
+    this.camera.position.set(0, 60, 0.01);
     this.camera.lookAt(0, 0, 0);
   }
 
@@ -238,7 +229,7 @@ export class Game {
     if (this.mode === "playing" && !this.paused && !this.won && !this.lost) {
       this.tick(dt * this.speed);
     } else if (this.mode === "menu") {
-      this.world.rotation.y = Math.sin(performance.now() * 0.00012) * 0.06;
+      this.world.rotation.y = 0;
     }
     this.vfx.update(dt);
     this.bobDecor(dt);
@@ -252,7 +243,10 @@ export class Game {
       if (obj.name === "water") obj.position.y = -0.02 + Math.sin(t) * 0.02;
     });
     for (const h of this.heroes) {
-      if (h.mesh && h.hp > 0) h.mesh.position.y = Math.sin(t * 3 + h.x) * 0.03;
+      if (h.mesh && h.hp > 0) h.mesh.position.y = Math.sin(t * 6 + h.x) * 0.04;
+    }
+    for (const e of this.enemies) {
+      if (e.mesh) e.mesh.position.y = Math.sin(t * 10 + e.dist) * 0.05;
     }
     void dt;
   }
@@ -301,8 +295,7 @@ export class Game {
     const weapon = type === "armored" ? "shield" : type === "cavalry" ? "horse" : "spear";
     const mesh = makeCharacter({
       kind: type,
-      scale: def.scale,
-      weapon,
+      scale: 1,
       hero,
     });
     mesh.position.set(pos.x, 0, pos.z);
@@ -363,8 +356,8 @@ export class Game {
       e.x = p.x;
       e.z = p.z;
       e.mesh.position.set(p.x, 0, p.z);
-      e.mesh.lookAt(p.x + p.nx, 0, p.z + p.nz);
-      e.hpBar.position.set(p.x, 1.85 * e.def.scale + 0.55, p.z);
+      faceSprite(e.mesh, p.nx);
+      e.hpBar.position.set(p.x, (e.mesh.userData.height || 2) + 0.1, p.z);
       e.blob.position.set(p.x, 0, p.z);
       setHpBar(e.hpBar, e.hp / e.maxHp);
     }
@@ -407,7 +400,7 @@ export class Game {
   }
 
   fireTower(t, target, stats) {
-      const from = new THREE.Vector3(t.x, 1.85, t.z);
+      const from = new THREE.Vector3(t.x, 2.2, t.z);
     const to = new THREE.Vector3(target.x, 0.9, target.z);
     if (t.type === "ballista") {
       this.vfx.bolt(from, to, 0xffe08a);
@@ -515,8 +508,8 @@ export class Game {
         for (const e of this.enemies) if (e.blocked === s.id) e.blocked = null;
       }
       s.mesh.position.set(s.x, 0, s.z);
-      if (target) s.mesh.lookAt(target.x, 0, target.z);
-      s.hpBar.position.set(s.x, 1.9, s.z);
+      if (target) faceSprite(s.mesh, target.x - s.x);
+      s.hpBar.position.set(s.x, (s.mesh.userData.height || 1.9) + 0.1, s.z);
       s.blob.position.set(s.x, 0, s.z);
       setHpBar(s.hpBar, s.hp / s.maxHp);
     }
@@ -564,9 +557,9 @@ export class Game {
         this.hurt(foe, h.def.damage, from);
       }
       h.mesh.position.set(h.x, 0, h.z);
-      if (foe) h.mesh.lookAt(foe.x, 0, foe.z);
-      else if (h.move) h.mesh.lookAt(h.move.x, 0, h.move.z);
-      h.hpBar.position.set(h.x, 2.5, h.z);
+      if (foe) faceSprite(h.mesh, foe.x - h.x);
+      else if (h.move) faceSprite(h.mesh, h.move.x - h.x);
+      h.hpBar.position.set(h.x, (h.mesh.userData.height || 2.5) + 0.1, h.z);
       h.blob.position.set(h.x, 0, h.z);
       setHpBar(h.hpBar, h.hp / h.def.hp);
     }
@@ -588,10 +581,7 @@ export class Game {
   hurt(enemy, amount, from) {
     if (!enemy || enemy.hp <= 0) return;
     enemy.hp -= amount;
-    if (from) {
-      const look = enemy.mesh;
-      look.lookAt(from.x, 0, from.z);
-    }
+    if (from) faceSprite(enemy.mesh, from.x - enemy.x);
     if (enemy.hp <= 0) {
       const idx = this.enemies.indexOf(enemy);
       if (idx >= 0) {
@@ -861,7 +851,7 @@ export class Game {
     }
 
     let spotId = -1;
-    let spotD = 1.25;
+    let spotD = 1.85;
     this.map.spots.forEach((p, i) => {
       if (this.towers.some((t) => t.spotId === i)) return;
       const d = Math.hypot(p[0] - hit.x, p[1] - hit.z);

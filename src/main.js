@@ -1,17 +1,35 @@
 import "./style.css";
+import { asset, loadArt } from "./art.js";
 import { Game } from "./Game.js";
 
+const loading = document.querySelector("#loading");
+const uiRoot = document.querySelector("#ui");
 const canvas = document.querySelector("#view");
-const game = new Game(canvas);
+
+function bindIcons() {
+  const pairs = [
+    ["#ico-heart", "ui/heart.png"],
+    ["#ico-coin", "ui/coin.png"],
+    ["#ico-skull", "ui/skull.png"],
+    ["#ico-horn", "ui/horn.png"],
+  ];
+  for (const [sel, path] of pairs) {
+    const el = document.querySelector(sel);
+    if (el) el.src = asset(path);
+  }
+}
+
+bindIcons();
 
 const els = {
   menu: document.querySelector("#menu"),
   hud: document.querySelector("#hud"),
   overlay: document.querySelector("#overlay"),
   mapList: document.querySelector("#map-list"),
-  gold: document.querySelector("#stat-gold b"),
-  lives: document.querySelector("#stat-lives b"),
-  wave: document.querySelector("#stat-wave b"),
+  gold: document.querySelector("#stat-gold"),
+  lives: document.querySelector("#stat-lives"),
+  wave: document.querySelector("#stat-wave"),
+  waveNum: document.querySelector("#wave-num"),
   toast: document.querySelector("#toast"),
   banner: document.querySelector("#banner"),
   hint: document.querySelector("#spot-hint"),
@@ -25,12 +43,8 @@ const els = {
   overlayText: document.querySelector("#overlay-text"),
 };
 
-const ICONS = {
-  ballista: "弩",
-  thunder: "石",
-  barracks: "营",
-  sage: "谋",
-};
+let game;
+let lastPanelKey = "";
 
 function renderMenu(view) {
   if (els.mapList.childElementCount) return;
@@ -38,7 +52,7 @@ function renderMenu(view) {
     const btn = document.createElement("button");
     btn.className = "map-card";
     btn.type = "button";
-    btn.innerHTML = `<div class="map-swatch" style="background:${map.swatch}"></div><div><h3>${map.name}</h3><p>${map.subtitle}</p></div>`;
+    btn.innerHTML = `<img src="${asset(map.art)}" alt=""><div><h3>${map.name}</h3><p>${map.subtitle}</p></div>`;
     btn.addEventListener("click", () => game.startMap(map.id));
     els.mapList.appendChild(btn);
   }
@@ -49,19 +63,17 @@ function setHidden(el, hidden) {
 }
 
 function clampWheel(x, y) {
-  const pad = 120;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  const pad = 130;
   return {
-    x: Math.max(pad, Math.min(w - pad, x)),
-    y: Math.max(pad + 40, Math.min(h - 160, y)),
+    x: Math.max(pad, Math.min(window.innerWidth - pad, x)),
+    y: Math.max(pad + 40, Math.min(window.innerHeight - 170, y)),
   };
 }
 
 function slotStyle(i, n) {
   const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
-  const r = 78;
-  return `left:${110 + Math.cos(a) * r}px;top:${110 + Math.sin(a) * r}px`;
+  const r = 86;
+  return `left:${120 + Math.cos(a) * r}px;top:${120 + Math.sin(a) * r}px`;
 }
 
 function renderWheel(view) {
@@ -71,13 +83,14 @@ function renderWheel(view) {
     els.wheel.style.left = `${p.x}px`;
     els.wheel.style.top = `${p.y}px`;
     setHidden(els.wheel, false);
+    els.wheel.innerHTML = `<div class="wheel-hub"></div>`;
     Object.values(view.towers).forEach((t, i) => {
       const btn = document.createElement("button");
       btn.className = `wheel-slot ${t.id}`;
       btn.type = "button";
       btn.style.cssText = slotStyle(i, 4);
       btn.disabled = view.gold < t.cost;
-      btn.innerHTML = `<span class="mark"></span><b>${t.name}</b><small>${t.cost}</small>`;
+      btn.innerHTML = `<img src="${asset(`ui/icon-${t.id}.png`)}" alt=""><b>${t.name}</b><small>${t.cost}</small>`;
       btn.addEventListener("click", () => game.placeTower(view.build.spotId, t.id));
       els.wheel.appendChild(btn);
     });
@@ -88,32 +101,26 @@ function renderWheel(view) {
     els.wheel.style.left = `${p.x}px`;
     els.wheel.style.top = `${p.y}px`;
     setHidden(els.wheel, false);
+    els.wheel.innerHTML = `<div class="wheel-hub"></div>`;
     const items = [];
     if (view.towerPanel.canUpgrade) {
       items.push({
-        cls: "up",
-        html: `<span class="mark"></span><b>升级</b><small>${view.towerPanel.upgradeCost}</small>`,
+        html: `<b>升级</b><small>${view.towerPanel.upgradeCost}</small>`,
         disabled: view.gold < view.towerPanel.upgradeCost,
         on: () => game.upgradeSelected(),
       });
     }
     items.push({
-      cls: "sell",
-      html: `<span class="mark"></span><b>拆除</b><small>${view.towerPanel.sell}</small>`,
+      html: `<b>拆除</b><small>${view.towerPanel.sell}</small>`,
       disabled: false,
       on: () => game.sellSelected(),
     });
     if (view.towerPanel.barracks) {
-      items.push({
-        cls: "barracks",
-        html: `<span class="mark"></span><b>集结</b><small>点地</small>`,
-        disabled: true,
-        on: () => {},
-      });
+      items.push({ html: `<b>集结</b><small>点地</small>`, disabled: true, on: () => {} });
     }
     items.forEach((it, i) => {
       const btn = document.createElement("button");
-      btn.className = `wheel-slot ${it.cls}`;
+      btn.className = "wheel-slot";
       btn.type = "button";
       btn.style.cssText = slotStyle(i, items.length);
       btn.disabled = it.disabled;
@@ -147,12 +154,11 @@ function renderHeroes(view) {
     btn.classList.toggle("ready", h.ready);
     btn.disabled = !h.ready && view.aimHero !== h.id;
     const pct = h.maxCd ? Math.round((1 - h.cd / h.maxCd) * 100) : 100;
-    btn.innerHTML = `<div class="face"></div><b>${h.name}</b><small>${h.skill} · ${ready}</small><i class="cd-ring" style="--cd:${pct}"></i>`;
+    btn.innerHTML = `<img src="${asset(`ui/portrait-${h.id}.png`)}" alt=""><b>${h.name}</b><small>${ready}</small><i class="cd-ring" style="--cd:${pct}"></i>`;
   }
 }
 
-let lastPanelKey = "";
-game.on((view) => {
+function onView(view) {
   if (view.mode === "menu") {
     setHidden(els.menu, false);
     setHidden(els.hud, true);
@@ -166,8 +172,9 @@ game.on((view) => {
   setHidden(els.overlay, !(view.won || view.lost));
 
   els.gold.textContent = view.gold;
-  els.lives.textContent = view.lives;
-  els.wave.textContent = `${view.wave}/${view.waveTotal}`;
+  els.lives.textContent = `${view.lives}/20`;
+  els.wave.textContent = `波次 ${view.wave}/${view.waveTotal}`;
+  els.waveNum.textContent = String(view.wave);
   els.speedBtn.textContent = `×${view.speed}`;
   els.pauseBtn.textContent = view.paused ? "续" : "停";
   els.waveBtn.disabled = !view.pendingWave || view.won || view.lost;
@@ -213,16 +220,23 @@ game.on((view) => {
       ? `${view.map.name} 八波尽灭，吕布幻影亦已溃散。`
       : `${view.map.name} 失守。重整旗鼓，再守此关。`;
   }
-});
+}
 
-document.querySelector("#btn-wave").addEventListener("click", () => game.startWave());
-document.querySelector("#btn-speed").addEventListener("click", () => game.cycleSpeed());
-document.querySelector("#btn-pause").addEventListener("click", () => game.togglePause());
-document.querySelector("#btn-menu").addEventListener("click", () => game.backToMenu());
-document.querySelector("#btn-retry").addEventListener("click", () => {
-  if (game.map) game.startMap(game.map.id);
-});
-document.querySelector("#btn-home").addEventListener("click", () => game.backToMenu());
+async function boot() {
+  await loadArt();
+  loading.classList.add("hidden");
+  uiRoot.classList.remove("hidden");
+  game = new Game(canvas);
+  game.on(onView);
+  document.querySelector("#btn-wave").addEventListener("click", () => game.startWave());
+  document.querySelector("#btn-speed").addEventListener("click", () => game.cycleSpeed());
+  document.querySelector("#btn-pause").addEventListener("click", () => game.togglePause());
+  document.querySelector("#btn-menu").addEventListener("click", () => game.backToMenu());
+  document.querySelector("#btn-retry").addEventListener("click", () => {
+    if (game.map) game.startMap(game.map.id);
+  });
+  document.querySelector("#btn-home").addEventListener("click", () => game.backToMenu());
+  game.emit();
+}
 
-game.emit();
-void ICONS;
+boot();
