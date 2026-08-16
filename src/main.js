@@ -313,7 +313,7 @@ function onView(view) {
   setHidden(els.menu, true);
   setHidden(els.hud, false);
   setHidden(els.overlay, !(view.won || view.lost));
-  setHidden(els.pause, Boolean(view.paused && !view.silentPause && !view.won && !view.lost));
+  setHidden(els.pause, !(view.paused && !view.silentPause && !view.won && !view.lost));
 
   els.gold.textContent = view.gold;
   els.lives.textContent = `${view.lives}/20`;
