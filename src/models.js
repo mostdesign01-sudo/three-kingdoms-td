@@ -183,16 +183,74 @@ export function makePathRibbon() {
   return new THREE.Group();
 }
 
+const FACE_DEAD = 0.1;
+const FACE_HOLD = 0.14;
+const MOVE_EPS = 0.35;
+
+export function faceToward(obj, dirX, dt = 1 / 60, force = false) {
+  const visual = obj?.userData?.visual;
+  if (!visual) {
+    faceSprite(obj, dirX);
+    return;
+  }
+  const ud = obj.userData;
+  ud.faceHold = (ud.faceHold ?? 0) - dt;
+  let want = ud.face ?? 1;
+  if (dirX < -FACE_DEAD) want = -1;
+  else if (dirX > FACE_DEAD) want = 1;
+  if (force || (want !== ud.face && ud.faceHold <= 0)) {
+    ud.face = want;
+    ud.faceHold = FACE_HOLD;
+  }
+  visual.scale.x = ud.face;
+}
+
 export function faceSprite(obj, dirX) {
   const visual = obj?.userData?.visual;
   if (visual) {
-    const face = dirX < -0.05 ? -1 : 1;
-    visual.scale.x = face;
-    obj.userData.face = face;
+    faceToward(obj, dirX, 1, true);
     return;
   }
   if (!obj?.scale) return;
   const w = Math.abs(obj.userData.width || obj.scale.x);
   const h = obj.userData.height || obj.scale.y;
   obj.scale.set(dirX < -0.05 ? -w : w, h, 1);
+}
+
+export function stepLocomotion(unit, dt, { vx = 0, vz = 0, dust } = {}) {
+  const mesh = unit.mesh;
+  const bob = mesh?.userData?.bob;
+  const visual = mesh?.userData?.visual;
+  if (!bob || !visual) return false;
+
+  const speed = Math.hypot(vx, vz) / Math.max(dt, 1e-4);
+  const moving = speed > MOVE_EPS;
+
+  if (moving) {
+    unit.stride = (unit.stride ?? 0) + dt * (7.6 + speed * 1.55);
+    const wave = Math.sin(unit.stride);
+    const hop = Math.abs(wave);
+    bob.position.y = hop * 0.18;
+    bob.scale.set(1 + hop * 0.05, 1 + hop * 0.12, 1 - hop * 0.1);
+    bob.rotation.z += (-Math.sign(vx || 1) * Math.min(0.2, speed * 0.032) - bob.rotation.z) * 0.28;
+    bob.rotation.x += (Math.min(0.1, speed * 0.018) - bob.rotation.x) * 0.22;
+    const planted = wave >= 0;
+    if (unit._planted !== undefined && planted !== unit._planted) {
+      dust?.(unit.x, unit.z);
+      dust?.(unit.x + vx * 0.4, unit.z + vz * 0.4);
+    }
+    unit._planted = planted;
+    faceToward(mesh, vx, dt);
+    return true;
+  }
+
+  unit.breath = (unit.breath ?? Math.random() * 6) + dt * 2.05;
+  const b = Math.sin(unit.breath);
+  bob.position.y = b * 0.03;
+  bob.scale.set(1, 1 + b * 0.016, 1);
+  bob.rotation.z *= 0.8;
+  bob.rotation.x *= 0.8;
+  unit.stride = 0;
+  unit._planted = undefined;
+  return false;
 }

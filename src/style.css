@@ -481,3 +481,11 @@ button:disabled {
     font-size: 28px;
   }
 }
+
+body.shot #hud,
+body.shot #menu,
+body.shot #overlay,
+body.shot #rotate,
+body.shot #loading {
+  display: none !important;
+}

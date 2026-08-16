@@ -21,7 +21,19 @@ export const ART = {
   coin: "ui/coin.webp",
   skull: "ui/skull.webp",
   horn: "ui/horn.webp",
+  vfx: {
+    slash: "vfx/slash.webp",
+    slashMark: "vfx/slash-mark.webp",
+    bagua: "vfx/bagua.webp",
+    dust: "vfx/dust.webp",
+    rune: "vfx/rune.webp",
+    talisman: "vfx/talisman.webp",
+    spear: "vfx/spear.webp",
+    glow: "vfx/glow.webp",
+  },
 };
+
+export const VFX_PATHS = Object.values(ART.vfx);
 
 export function asset(path) {
   return `${BASE}${path.replace(/^\//, "")}`;
@@ -159,6 +171,7 @@ export function playPack(mapId) {
     ART.map(mapId),
     ...UNIT_IDS.map((id) => ART.unit(id)),
     ...TOWER_IDS.flatMap((id) => [1, 2, 3].map((lv) => ART.tower(id, lv))),
+    ...VFX_PATHS,
   ];
 }
 
