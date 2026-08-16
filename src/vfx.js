@@ -195,12 +195,12 @@ export class VFX {
     const n = 4;
     for (let i = 0; i < n; i++) {
       const k = (i + 1) / (n + 1);
-      const ghost = this.spriteCard(texMap, w, h, face, 0.52);
+      const ghost = this.spriteCard(texMap, w, h, face, 0.72);
       ghost.position.set(from.x + dx * k, 0, from.z + dz * k);
       ghost.rotation.y = this.aimYaw(ghost.position.x, ghost.position.z);
       this.spawn(ghost, 0.36 + i * 0.04, (it) => {
         it.node.rotation.y = this.aimYaw(it.node.position.x, it.node.position.z);
-        it.node.material.opacity = 0.5 * (it.life / it.max);
+        it.node.material.opacity = 0.7 * (it.life / it.max);
       });
     }
   }
@@ -240,13 +240,13 @@ export class VFX {
   }
 
   dust(x, z) {
-    const puff = this.card(tex(ART.vfx.dust), 0.72, 0.44, { opacity: 0.5 });
+    const puff = this.card(tex(ART.vfx.dust), 1.25, 0.78, { opacity: 0.88 });
     puff.rotation.x = -Math.PI / 2;
     puff.position.set(x + (Math.random() - 0.5) * 0.16, 0.04, z + (Math.random() - 0.5) * 0.16);
-    this.spawn(puff, 0.28, (it) => {
+    this.spawn(puff, 0.5, (it) => {
       const k = 1 - it.life / it.max;
       it.node.scale.setScalar(1 + k * 0.85);
-      it.node.material.opacity = 0.48 * (1 - k);
+      it.node.material.opacity = 0.65 * (1 - k);
       it.node.position.y = 0.04 + k * 0.1;
     });
   }

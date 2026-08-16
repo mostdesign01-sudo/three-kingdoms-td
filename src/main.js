@@ -335,29 +335,26 @@ function setupShot(game, shot) {
   const zy = game.heroes.find((h) => h.id === "zhaoyun");
   const zg = game.heroes.find((h) => h.id === "zhuge");
   if (shot === "1" || shot === "walk") {
-    if (gy) {
-      game.moveHero("guanyu", gy.x + 6.4, gy.z + 1.1);
-      game.panX = gy.x + 2.4;
-      game.panZ = gy.z + 0.4;
-    }
-    if (zy) game.moveHero("zhaoyun", zy.x + 5.2, zy.z);
+    if (gy) game.moveHero("guanyu", gy.x + 5.2, gy.z + 0.9);
+    game.poseForShot(0.37);
+    const h = game.heroes.find((n) => n.id === "guanyu") || gy;
+    game.zoomShot(h.x, h.z + 0.2, 3.2);
   } else if (shot === "guanyu" && gy) {
-    game.panX = gy.x + 1.2;
-    game.panZ = gy.z;
-    game.castHero("guanyu", gy.x + 2.4, gy.z + 1.1);
+    game.castHero("guanyu", gy.x + 2.6, gy.z + 1.15);
+    game.poseForShot(0.16);
+    game.zoomShot(gy.x + 1.1, gy.z + 0.4, 5.1);
   } else if (shot === "zhaoyun" && zy) {
-    game.panX = zy.x + 3.2;
-    game.panZ = zy.z;
-    game.castHero("zhaoyun", zy.x + 7.2, zy.z + 0.35);
+    game.castHero("zhaoyun", zy.x + 6.8, zy.z + 0.3);
+    game.poseForShot(0.14);
+    game.zoomShot(zy.x + 3.2, zy.z, 5.0);
   } else if (shot === "zhuge" && zg) {
-    game.panX = zg.x + 0.6;
-    game.panZ = zg.z;
-    game.castHero("zhuge", zg.x + 1.4, zg.z + 0.8);
+    game.castHero("zhuge", zg.x + 1.3, zg.z + 0.7);
+    game.poseForShot(0.35);
+    game.zoomShot(zg.x + 0.7, zg.z + 0.3, 5.4);
   } else {
     game.placeTower(3, "ballista");
     game.placeTower(4, "thunder");
   }
-  game.applyView();
 }
 
 boot();

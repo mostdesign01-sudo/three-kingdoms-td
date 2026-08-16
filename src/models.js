@@ -230,13 +230,14 @@ export function stepLocomotion(unit, dt, { vx = 0, vz = 0, dust } = {}) {
     unit.stride = (unit.stride ?? 0) + dt * (7.6 + speed * 1.55);
     const wave = Math.sin(unit.stride);
     const hop = Math.abs(wave);
-    bob.position.y = hop * 0.13;
-    bob.scale.set(1 + hop * 0.035, 1 + hop * 0.08, 1 - hop * 0.07);
+    bob.position.y = hop * 0.18;
+    bob.scale.set(1 + hop * 0.05, 1 + hop * 0.12, 1 - hop * 0.1);
     bob.rotation.z += (-Math.sign(vx || 1) * Math.min(0.2, speed * 0.032) - bob.rotation.z) * 0.28;
     bob.rotation.x += (Math.min(0.1, speed * 0.018) - bob.rotation.x) * 0.22;
     const planted = wave >= 0;
     if (unit._planted !== undefined && planted !== unit._planted) {
       dust?.(unit.x, unit.z);
+      dust?.(unit.x + vx * 0.4, unit.z + vz * 0.4);
     }
     unit._planted = planted;
     faceToward(mesh, vx, dt);

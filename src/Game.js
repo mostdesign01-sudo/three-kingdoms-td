@@ -337,10 +337,12 @@ export class Game {
     const dt = Math.min(0.05, this.clock.getDelta());
     if (this.mode === "playing" && !this.paused && !this.orientHold && !this.won && !this.lost) {
       this.tick(dt * this.speed);
+      this.vfx.update(dt);
     } else if (this.mode === "menu") {
       this.world.rotation.y = 0;
+    } else if (this.mode !== "playing") {
+      this.vfx.update(dt);
     }
-    this.vfx.update(dt);
     this.bobDecor(dt);
     this.aimBillboards();
     this.renderer.render(this.scene, this.camera);
@@ -976,6 +978,26 @@ export class Game {
   cycleSpeed() {
     this.speed = this.speed === 1 ? 2 : this.speed === 2 ? 3 : 1;
     this.emit();
+  }
+
+  poseForShot(seconds) {
+    const step = 1 / 30;
+    let t = 0;
+    while (t < seconds) {
+      const dt = Math.min(step, seconds - t);
+      if (!this.won && !this.lost) this.tick(dt);
+      this.vfx.update(dt);
+      t += dt;
+    }
+    this.aimBillboards();
+    this.paused = true;
+  }
+
+  zoomShot(x, z, size = 4.4) {
+    this.viewSize = size;
+    this.panX = x;
+    this.panZ = z;
+    this.applyView();
   }
 
   groundHit(event) {

@@ -4,7 +4,7 @@
 from math import cos, pi, sin
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 OUT = Path("/workspace/public/vfx")
 OUT.mkdir(parents=True, exist_ok=True)
@@ -17,22 +17,27 @@ def save(im: Image.Image, name: str) -> None:
 
 
 def crescent() -> Image.Image:
-    im = Image.new("RGBA", (512, 256), (0, 0, 0, 0))
+    w, h = 640, 320
+    gold = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(gold).pieslice((8, -120, 632, 520), 196, 344, fill=(230, 190, 70, 235))
+    punch = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(punch).pieslice((118, -20, 522, 420), 200, 340, fill=255)
+    gold.putalpha(ImageChops.subtract(gold.split()[3], punch))
+
+    green = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(green).pieslice((28, -100, 612, 500), 198, 342, fill=(50, 170, 75, 230))
+    punch2 = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(punch2).pieslice((100, -30, 540, 410), 202, 338, fill=255)
+    green.putalpha(ImageChops.subtract(green.split()[3], punch2))
+
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    im = Image.alpha_composite(im, gold)
+    im = Image.alpha_composite(im, green)
     d = ImageDraw.Draw(im)
-    # Wide 偃月 blade: gold rim, green core
-    for i, (col, w) in enumerate(
-        (
-            ((80, 40, 8, 40), 42),
-            ((210, 170, 50, 90), 28),
-            ((60, 160, 70, 200), 18),
-            ((230, 220, 120, 230), 8),
-        )
-    ):
-        d.arc((30 + i, 20 + i, 482 - i, 420 - i), 200, 340, fill=col, width=w)
-    # tip flare
-    d.ellipse((430, 70, 490, 130), fill=(255, 230, 140, 180))
-    d.ellipse((40, 150, 90, 200), fill=(40, 120, 50, 120))
-    return im.filter(ImageFilter.GaussianBlur(0.6))
+    d.arc((36, -70, 604, 470), 198, 342, fill=(255, 230, 130, 240), width=10)
+    d.ellipse((545, 70, 620, 145), fill=(255, 236, 160, 210))
+    d.ellipse((28, 175, 88, 235), fill=(40, 130, 55, 160))
+    return im.filter(ImageFilter.GaussianBlur(0.5))
 
 
 def slash_mark() -> Image.Image:
@@ -88,16 +93,17 @@ def bagua() -> Image.Image:
 
 
 def dust() -> Image.Image:
-    im = Image.new("RGBA", (128, 80), (0, 0, 0, 0))
+    im = Image.new("RGBA", (160, 100), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     for cx, cy, r, a in (
-        (40, 50, 22, 90),
-        (64, 42, 28, 110),
-        (90, 52, 20, 80),
-        (52, 58, 14, 70),
+        (48, 64, 30, 170),
+        (82, 50, 38, 200),
+        (118, 66, 28, 160),
+        (70, 74, 20, 140),
+        (100, 58, 16, 120),
     ):
-        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(150, 120, 70, a))
-    return im.filter(ImageFilter.GaussianBlur(2.2))
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(236, 214, 168, a))
+    return im.filter(ImageFilter.GaussianBlur(2.4))
 
 
 def rune() -> Image.Image:
