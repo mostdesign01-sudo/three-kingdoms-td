@@ -106,7 +106,7 @@ function tryLockLandscape() {
 }
 
 function clampWheel(x, y) {
-  const pad = 140;
+  const pad = 108;
   return {
     x: Math.max(pad, Math.min(window.innerWidth - pad, x)),
     y: Math.max(pad, Math.min(window.innerHeight - pad, y)),

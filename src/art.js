@@ -4,7 +4,7 @@ const BASE = import.meta.env.BASE_URL;
 const cache = new Map();
 const inflight = new Map();
 
-export const MAP_SIZE = { w: 40, d: 22.5 };
+export const MAP_SIZE = { w: 40, d: (40 * 1024) / 1536 };
 
 export const UNIT_IDS = ["guanyu", "zhaoyun", "zhuge", "lubu", "scout", "infantry", "cavalry", "armored", "elite", "soldier"];
 export const TOWER_IDS = ["ballista", "thunder", "barracks", "sage"];
@@ -138,7 +138,6 @@ async function loadAll(paths, onProgress) {
 export function playPack(mapId) {
   return [
     ART.map(mapId),
-    ART.pad,
     ...UNIT_IDS.map((id) => ART.unit(id)),
     ...TOWER_IDS.flatMap((id) => [1, 2, 3].map((lv) => ART.tower(id, lv))),
   ];
