@@ -15,7 +15,8 @@ function bindIcons() {
     ["#ico-horn", ART.horn],
     ["#ico-back", ART.chrome.back],
     ["#ico-pause", ART.chrome.pause],
-    ["#ico-call", ART.chrome.call],
+    ["#ico-call", ART.skull],
+    ["#ico-skull", ART.skull],
     ["#campaign-board", ART.chrome.board],
     ["#title-plaque", ART.chrome.title],
   ];
@@ -23,6 +24,7 @@ function bindIcons() {
     const el = document.querySelector(sel);
     if (el) el.src = asset(path);
   }
+  document.documentElement.style.setProperty("--plaque", `url("${asset(ART.chrome.plaque)}")`);
 }
 
 bindIcons();
@@ -53,6 +55,7 @@ const els = {
   starRow: document.querySelector("#star-row"),
   endStats: document.querySelector("#end-stats"),
   callFlag: document.querySelector("#call-flag"),
+  callPreview: document.querySelector("#call-preview"),
   floaters: document.querySelector("#floaters"),
 };
 
@@ -61,6 +64,7 @@ let lastPanelKey = "";
 let lastEndKey = "";
 let entering = false;
 let sellArmed = false;
+let buildArmed = null;
 let rotateDismissed = false;
 const seenPops = new Set();
 
@@ -70,16 +74,25 @@ function setLoading(hidden, text, ratio) {
   loading.classList.toggle("hidden", hidden);
 }
 
+const FLAG_POS = [
+  { left: "22%", top: "54%" },
+  { left: "50%", top: "34%" },
+  { left: "76%", top: "52%" },
+];
+
 function renderMenu(view) {
   if (els.mapList.childElementCount) return;
-  for (const map of view.maps) {
+  view.maps.forEach((map, i) => {
+    const pos = FLAG_POS[i] || FLAG_POS[0];
     const btn = document.createElement("button");
-    btn.className = "pass-card";
+    btn.className = "flag-pin";
     btn.type = "button";
-    btn.innerHTML = `<img src="${asset(map.art)}" alt=""><div><h3>${map.name}</h3><p>${map.subtitle}</p></div><span class="march">出征</span>`;
+    btn.style.left = pos.left;
+    btn.style.top = pos.top;
+    btn.innerHTML = `<img src="${asset(ART.chrome.flag)}" alt=""><b>${map.name}</b><small>出征</small>`;
     btn.addEventListener("click", () => enterMap(map.id));
     els.mapList.appendChild(btn);
-  }
+  });
 }
 
 function setHidden(el, hidden) {
@@ -123,7 +136,7 @@ function tryLockLandscape() {
 }
 
 function clampWheel(x, y) {
-  const pad = 120;
+  const pad = 110;
   return {
     x: Math.max(pad, Math.min(window.innerWidth - pad, x)),
     y: Math.max(pad, Math.min(window.innerHeight - pad, y)),
@@ -132,8 +145,8 @@ function clampWheel(x, y) {
 
 function slotStyle(i, n) {
   const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
-  const r = 100;
-  return `left:${140 + Math.cos(a) * r}px;top:${140 + Math.sin(a) * r}px;--medal:url("${asset(ART.chrome.medallion)}")`;
+  const r = 86;
+  return `left:${120 + Math.cos(a) * r}px;top:${120 + Math.sin(a) * r}px;--medal:url("${asset(ART.chrome.medallion)}")`;
 }
 
 function addHub() {
@@ -144,6 +157,7 @@ function addHub() {
   hub.innerHTML = `<img src="${asset(ART.chrome.cancel)}" alt="X">`;
   hub.addEventListener("click", () => {
     sellArmed = false;
+    buildArmed = null;
     game.clearBuildPreview();
     game.clearSelected();
   });
@@ -158,21 +172,43 @@ function renderWheel(view) {
     els.wheel.style.top = `${p.y}px`;
     setHidden(els.wheel, false);
     addHub();
+    const tip = document.createElement("div");
+    tip.className = `wheel-tip hidden${p.x > window.innerWidth * 0.62 ? " flip" : ""}`;
+    els.wheel.appendChild(tip);
     Object.values(view.towers).forEach((t, i) => {
       const btn = document.createElement("button");
-      btn.className = `wheel-slot ${t.id}`;
+      btn.className = `wheel-slot ${t.id}${buildArmed === t.id ? " armed" : ""}`;
       btn.type = "button";
       btn.style.cssText = slotStyle(i, 4);
       btn.disabled = view.gold < t.cost;
       btn.innerHTML = `<img src="${asset(ART.icon(t.id))}" alt="${t.name}"><span class="cost-badge">${t.cost}</span>`;
-      btn.title = t.name;
-      const preview = () => game.previewBuild(t.id);
-      btn.addEventListener("pointerenter", preview);
-      btn.addEventListener("pointerdown", preview);
-      btn.addEventListener("pointerleave", () => game.clearBuildPreview());
-      btn.addEventListener("click", () => game.placeTower(view.build.spotId, t.id));
+      const showTip = () => {
+        game.previewBuild(t.id);
+        tip.classList.remove("hidden");
+        tip.innerHTML = `<b>${t.name}</b><p>${t.desc}</p>`;
+      };
+      btn.addEventListener("pointerenter", showTip);
+      btn.addEventListener("pointerdown", showTip);
+      btn.addEventListener("pointerleave", () => {
+        if (buildArmed !== t.id) game.clearBuildPreview();
+      });
+      btn.addEventListener("click", () => {
+        if (buildArmed !== t.id) {
+          buildArmed = t.id;
+          showTip();
+          renderWheel(view);
+          return;
+        }
+        buildArmed = null;
+        game.placeTower(view.build.spotId, t.id);
+      });
       els.wheel.appendChild(btn);
     });
+    if (buildArmed && view.towers[buildArmed]) {
+      const t = view.towers[buildArmed];
+      tip.classList.remove("hidden");
+      tip.innerHTML = `<b>${t.name}</b><p>${t.desc}</p>`;
+    }
     return;
   }
   if (view.towerPanel) {
@@ -185,25 +221,22 @@ function renderWheel(view) {
     chip.className = "tower-chip";
     chip.innerHTML = `<b>${view.towerPanel.name}</b><small>${view.towerPanel.levelName}</small>`;
     els.wheel.appendChild(chip);
-    const items = [];
-    if (view.towerPanel.canUpgrade) {
-      items.push({
-        cls: "up",
-        html: `<img src="${asset(ART.chrome.upgrade)}" alt="升级"><span class="cost-badge">${view.towerPanel.upgradeCost}</span>`,
-        title: "升级",
-        disabled: view.gold < view.towerPanel.upgradeCost,
-        on: () => {
-          sellArmed = false;
-          game.upgradeSelected();
-        },
-      });
-    }
-    items.push({
+    const up = view.towerPanel.canUpgrade
+      ? {
+          cls: "up",
+          html: `<img src="${asset(ART.chrome.upgrade)}" alt=""><span class="cost-badge">${view.towerPanel.upgradeCost}</span>`,
+          disabled: view.gold < view.towerPanel.upgradeCost,
+          on: () => {
+            sellArmed = false;
+            game.upgradeSelected();
+          },
+        }
+      : { cls: "ghost max", html: `<small>满级</small>`, disabled: true, on: () => {} };
+    const sell = {
       cls: sellArmed ? "sell confirm" : "sell",
       html: sellArmed
-        ? `<img src="${asset(ART.chrome.sell)}" alt="确认拆除"><span class="cost-badge">拆</span>`
-        : `<img src="${asset(ART.chrome.sell)}" alt="拆除"><span class="cost-badge">${view.towerPanel.sell}</span>`,
-      title: sellArmed ? "确认拆除" : "拆除",
+        ? `<img src="${asset(ART.chrome.sell)}" alt=""><span class="cost-badge">拆</span>`
+        : `<img src="${asset(ART.chrome.sell)}" alt=""><span class="cost-badge">${view.towerPanel.sell}</span>`,
       disabled: false,
       on: () => {
         if (!sellArmed) {
@@ -214,14 +247,14 @@ function renderWheel(view) {
         sellArmed = false;
         game.sellSelected();
       },
-    });
-    items.forEach((it, i) => {
+    };
+    const ghost = { cls: "ghost", html: "", disabled: true, on: () => {} };
+    [up, ghost, sell, ghost].forEach((it, i) => {
       const btn = document.createElement("button");
       btn.className = `wheel-slot ${it.cls}`;
       btn.type = "button";
-      btn.style.cssText = slotStyle(i, items.length);
+      btn.style.cssText = slotStyle(i, 4);
       btn.disabled = it.disabled;
-      btn.title = it.title;
       btn.innerHTML = it.html;
       btn.addEventListener("click", it.on);
       els.wheel.appendChild(btn);
@@ -235,27 +268,38 @@ function renderHeroes(view) {
   if (!els.heroes.dataset.ready) {
     els.heroes.innerHTML = "";
     for (const h of view.heroes) {
-      const btn = document.createElement("button");
-      btn.className = `hero-btn ${h.id}`;
-      btn.type = "button";
-      btn.dataset.id = h.id;
-      btn.innerHTML = `<img src="${asset(ART.portrait(h.id))}" alt="${h.name}"><i class="cd-ring"></i>`;
-      btn.addEventListener("click", () => game.beginHeroSkill(h.id));
-      els.heroes.appendChild(btn);
+      const card = document.createElement("div");
+      card.className = `hero-card ${h.id}`;
+      card.dataset.id = h.id;
+      card.innerHTML = `<button class="hero-btn" type="button"><img src="${asset(ART.portrait(h.id))}" alt="${h.name}"><i class="cd-ring"></i><i class="hero-hp"><i></i></i><b class="hero-respawn hidden">0</b></button><button class="skill-pip" type="button">技</button>`;
+      card.querySelector(".hero-btn").addEventListener("click", () => game.selectHero(h.id));
+      card.querySelector(".skill-pip").addEventListener("click", () => game.beginHeroSkill(h.id));
+      els.heroes.appendChild(card);
     }
     els.heroes.dataset.ready = "1";
   }
   for (const h of view.heroes) {
-    const btn = els.heroes.querySelector(`[data-id="${h.id}"]`);
-    if (!btn) continue;
+    const card = els.heroes.querySelector(`.hero-card[data-id="${h.id}"]`);
+    if (!card) continue;
+    const btn = card.querySelector(".hero-btn");
+    const pip = card.querySelector(".skill-pip");
     btn.classList.toggle("aiming", view.aimHero === h.id);
     btn.classList.toggle("ready", h.ready);
     btn.classList.toggle("dead", h.dead);
-    btn.disabled = !h.ready && view.aimHero !== h.id;
+    btn.classList.toggle("selected", view.selected?.kind === "hero" && view.selected.id === h.id);
+    pip.disabled = !h.ready && view.aimHero !== h.id;
+    pip.title = h.skill;
     const pct = h.maxCd ? Math.round((1 - h.cd / h.maxCd) * 100) : 100;
-    btn.title = h.ready ? h.skill : h.name;
     const ring = btn.querySelector(".cd-ring");
     if (ring) ring.style.setProperty("--cd", String(pct));
+    const hp = btn.querySelector(".hero-hp i");
+    if (hp) hp.style.width = `${Math.max(0, Math.round((h.hp / (h.maxHp || 1)) * 100))}%`;
+    const timer = btn.querySelector(".hero-respawn");
+    if (timer) {
+      const show = h.dead && h.respawn > 0;
+      timer.classList.toggle("hidden", !show);
+      if (show) timer.textContent = `${Math.ceil(h.respawn)}`;
+    }
   }
 }
 
@@ -267,6 +311,16 @@ function renderCallFlag(view) {
   els.callFlag.style.left = `${view.callFlag.x}px`;
   els.callFlag.style.top = `${view.callFlag.y}px`;
   els.callFlag.classList.toggle("early", Boolean(view.callFlag.early));
+  els.callFlag.classList.toggle("armed", Boolean(view.callArmed || view.callFlag.armed));
+  if (els.callPreview) {
+    const info = view.nextWave;
+    const show = Boolean(view.callArmed && info);
+    setHidden(els.callPreview, !show);
+    if (show) {
+      const types = info.types.map((t) => `${t.name}×${t.count}`).join(" ");
+      els.callPreview.textContent = `${info.label} ${types}`;
+    }
+  }
   setHidden(els.callFlag, false);
 }
 
@@ -316,10 +370,11 @@ function onView(view) {
   setHidden(els.pause, !(view.paused && !view.silentPause && !view.won && !view.lost));
 
   els.gold.textContent = view.gold;
-  els.lives.textContent = `${view.lives}/20`;
-  els.wave.textContent = `${view.wave}/${view.waveTotal}`;
+  els.lives.textContent = view.lives;
+  const waveShown = view.waveActive ? view.wave : Math.min(view.waveTotal, view.wave + 1);
+  els.wave.textContent = `WAVE ${waveShown}/${view.waveTotal}`;
   els.waveName.textContent = view.waveName;
-  if (els.speedIco) els.speedIco.src = asset(ART.chrome.speed(view.speed));
+  if (els.speedIco) els.speedIco.src = asset(view.speed === 1 ? ART.chrome.play : ART.chrome.speed);
   els.speedBtn.title = `×${view.speed}`;
   const canCall = view.canCall && !view.won && !view.lost;
   els.waveBtn.disabled = !canCall;
@@ -329,13 +384,23 @@ function onView(view) {
   const panelKey = JSON.stringify({
     s: view.selected,
     g: view.gold,
-    tp: view.towerPanel,
-    b: view.build,
+    lv: view.towerPanel?.level,
+    up: view.towerPanel?.canUpgrade,
+    cost: view.towerPanel?.upgradeCost,
+    sell: view.towerPanel?.sell,
+    spot: view.build?.spotId,
+    a: buildArmed,
   });
   if (panelKey !== lastPanelKey) {
     lastPanelKey = panelKey;
-    sellArmed = false;
+    if (!view.build) buildArmed = null;
+    if (!view.towerPanel) sellArmed = false;
     renderWheel(view);
+  } else if (view.build || view.towerPanel) {
+    const src = view.build || view.towerPanel;
+    const p = clampWheel(src.x, src.y);
+    els.wheel.style.left = `${p.x}px`;
+    els.wheel.style.top = `${p.y}px`;
   }
 
   renderHeroes(view);
@@ -396,8 +461,11 @@ function boot() {
       if (game.map) enterMap(game.map.id);
     });
     document.querySelector("#btn-home").addEventListener("click", () => game.backToMenu());
-    els.callFlag.addEventListener("click", () => game.startWave());
-    if (els.speedIco) els.speedIco.src = asset(ART.chrome.speed(1));
+    els.callFlag.addEventListener("click", () => {
+      if (game.callArmed) game.startWave();
+      else game.previewCallWave();
+    });
+    if (els.speedIco) els.speedIco.src = asset(ART.chrome.play);
     game.emit();
     document.querySelector("#btn-enter").addEventListener("click", enterAnyway);
     syncOrientation();
@@ -409,7 +477,7 @@ function boot() {
       rotateDismissed = true;
       hideRotate();
       window.__td = game;
-      const uiShots = new Set(["menu", "build", "upgrade", "pause", "wave", "win"]);
+      const uiShots = new Set(["menu", "build", "upgrade", "pause", "wave", "win", "skull", "heroes", "lose"]);
       document.body.classList.add(uiShots.has(shot) ? "shot-ui" : "shot");
       if (shot === "menu") {
         game.emit();
@@ -449,8 +517,15 @@ function setupShot(game, shot) {
     game.zoomShot(zg.x + 0.7, zg.z + 0.3, 5.4);
   } else if (shot === "build") {
     game.selected = { kind: "spot", id: 3 };
+    buildArmed = "ballista";
     game.previewBuild("ballista");
     game.emit();
+  } else if (shot === "skull") {
+    game.previewCallWave();
+  } else if (shot === "heroes") {
+    game.selectHero("guanyu");
+  } else if (shot === "lose") {
+    game.mockEnd(false);
   } else if (shot === "upgrade") {
     game.placeTower(3, "ballista");
     const t = game.towers[0];

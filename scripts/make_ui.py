@@ -188,12 +188,40 @@ def wood_bar():
     return im
 
 
+def plaque_wood():
+    w, h = 360, 88
+    im = wood((w, h)).convert("RGBA")
+    d = ImageDraw.Draw(im, "RGBA")
+    d.rounded_rectangle((2, 2, w - 3, h - 3), 12, outline=(224, 184, 74, 255), width=5)
+    d.rounded_rectangle((10, 10, w - 11, h - 11), 8, outline=(90, 60, 24, 160), width=2)
+    return im
+
+
+def icon_play(d, s):
+    c = s // 2
+    d.polygon([(c - 14, c - 20), (c + 20, c), (c - 14, c + 20)], fill=(246, 230, 184, 255))
+
+
+def flag_pin():
+    im = Image.new("RGBA", (96, 140), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im, "RGBA")
+    d.rectangle((20, 8, 28, 128), fill=(90, 70, 40, 255))
+    d.polygon([(28, 10), (86, 38), (28, 66)], fill=(154, 28, 28, 255))
+    d.polygon([(28, 10), (86, 38), (28, 66)], outline=(224, 184, 74, 255))
+    d.ellipse((14, 118, 34, 136), fill=(40, 28, 16, 180))
+    return im.filter(ImageFilter.GaussianBlur(0.3))
+
+
 if __name__ == "__main__":
     iron = (58, 40, 26, 255)
     lacquer = (139, 30, 30, 255)
     save(circle_btn(128, iron, icon_back), "btn-back.webp")
     save(circle_btn(128, iron, icon_pause), "btn-pause.webp")
+    save(circle_btn(128, iron, icon_pause), "icon-pause.webp")
+    save(circle_btn(128, iron, icon_play), "icon-play.webp")
+    save(circle_btn(128, iron, speed_pips(2)), "icon-speed.webp")
     save(circle_btn(128, lacquer, icon_cancel, True), "btn-cancel.webp")
+    save(circle_btn(128, lacquer, icon_cancel, True), "icon-cancel.webp")
     save(circle_btn(128, iron, speed_pips(1)), "btn-speed-1.webp")
     save(circle_btn(128, iron, speed_pips(2)), "btn-speed-2.webp")
     save(circle_btn(128, iron, speed_pips(3)), "btn-speed-3.webp")
@@ -201,8 +229,11 @@ if __name__ == "__main__":
     save(circle_btn(128, (70, 48, 22, 255), icon_sell), "icon-sell.webp")
     save(star(True), "star-on.webp")
     save(star(False), "star-off.webp")
+    save(star(True), "icon-star.webp")
     save(medallion(), "medallion.webp")
     save(call_flag(), "call-flag.webp")
+    save(flag_pin(), "flag-pin.webp")
     save(title_plaque(), "title-plaque.webp")
     save(campaign_board(), "campaign-board.webp")
     save(wood_bar(), "wood-bar.webp")
+    save(plaque_wood(), "plaque-wood.webp")

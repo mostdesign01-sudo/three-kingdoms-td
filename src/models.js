@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { ART, makeBillboard, makeGround, tex } from "./art.js";
+import { ART, makeBillboard, makeDecal, makeGround, tex } from "./art.js";
 
 export const geo = {
   box: new THREE.BoxGeometry(1, 1, 1),
@@ -84,20 +84,42 @@ export function makeTower(type, level = 1) {
 
 export function makeSpot() {
   const group = new THREE.Group();
-  const edge = new THREE.Mesh(
-    new THREE.RingGeometry(0.7, 0.92, 48),
+  const decal = makeDecal(tex(ART.pad), 2.15);
+  decal.material.opacity = 0.4;
+  decal.material.alphaTest = 0.04;
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.78, 0.98, 48),
     new THREE.MeshBasicMaterial({
       color: 0xe8c85a,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.2,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
   );
-  edge.rotation.x = -Math.PI / 2;
-  group.add(edge);
-  group.visible = false;
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.03;
+  group.add(decal, ring);
+  group.userData.decal = decal;
+  group.userData.ring = ring;
   return group;
+}
+
+export function makeRallyFlag() {
+  const g = new THREE.Group();
+  const pole = mesh(geo.cyl, mat(0x5a4030), 0, 0.42, 0, 0.035, 0.84, 0.035);
+  const flag = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.58, 0.4),
+    new THREE.MeshBasicMaterial({
+      map: tex(ART.chrome.call),
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  flag.position.set(0.24, 0.7, 0);
+  g.add(pole, flag);
+  return g;
 }
 
 export function makeRangeRing(fillColor = 0xc9a227, edgeColor = 0xe8c85a) {
@@ -107,24 +129,36 @@ export function makeRangeRing(fillColor = 0xc9a227, edgeColor = 0xe8c85a) {
     new THREE.MeshBasicMaterial({
       color: fillColor,
       transparent: true,
-      opacity: 0.13,
+      opacity: 0.2,
       depthWrite: false,
     }),
   );
   fill.rotation.x = -Math.PI / 2;
-  const edge = new THREE.Mesh(
-    new THREE.RingGeometry(0.96, 1, 48),
+  const soft = new THREE.Mesh(
+    new THREE.RingGeometry(0.72, 0.9, 48),
     new THREE.MeshBasicMaterial({
       color: edgeColor,
       transparent: true,
-      opacity: 0.38,
+      opacity: 0.16,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  soft.rotation.x = -Math.PI / 2;
+  soft.position.y = 0.008;
+  const edge = new THREE.Mesh(
+    new THREE.RingGeometry(0.88, 1.02, 48),
+    new THREE.MeshBasicMaterial({
+      color: edgeColor,
+      transparent: true,
+      opacity: 0.42,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
   );
   edge.rotation.x = -Math.PI / 2;
   edge.position.y = 0.01;
-  group.add(fill, edge);
+  group.add(fill, soft, edge);
   group.position.y = 0.05;
   group.visible = false;
   return group;

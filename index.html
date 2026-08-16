@@ -50,7 +50,7 @@
             </div>
           </header>
           <p class="blurb">选一处关隘布防。敌军八波来犯，末波乃吕布幻影。</p>
-          <div id="map-list" class="pass-row"></div>
+          <div id="map-list" class="flag-field"></div>
         </section>
 
         <section id="hud" class="hud hidden">
@@ -59,14 +59,17 @@
               <img id="ico-back" alt="返" />
             </button>
             <div class="plaque res-plaque">
-              <span class="res"><img id="ico-heart" alt="" /><b id="stat-lives">20/20</b></span>
+              <span class="res"><img id="ico-heart" alt="" /><b id="stat-lives">20</b></span>
               <span class="res"><img id="ico-coin" alt="" /><b id="stat-gold">0</b></span>
             </div>
           </div>
 
           <div class="wave-flag">
-            <small id="stat-wave-name">待发</small>
-            <b id="stat-wave">0/8</b>
+            <img id="ico-skull" alt="" />
+            <div>
+              <b id="stat-wave">WAVE 1/8</b>
+              <small id="stat-wave-name">待发</small>
+            </div>
           </div>
 
           <div id="toast" class="toast hidden"></div>
@@ -75,6 +78,7 @@
           <div id="floaters" class="floaters"></div>
           <button id="call-flag" class="call-flag hidden" type="button" title="出兵">
             <img id="ico-call" alt="" />
+            <span id="call-preview" class="call-preview hidden"></span>
           </button>
 
           <div id="hero-bar" class="hero-bar"></div>

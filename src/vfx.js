@@ -251,6 +251,45 @@ export class VFX {
     });
   }
 
+  labelSprite(text, color) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    ctx.font = "700 34px 'Noto Serif SC', serif";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "#1a1208";
+    ctx.fillStyle = color;
+    ctx.strokeText(text, 64, 44);
+    ctx.fillText(text, 64, 44);
+    const map = new THREE.CanvasTexture(canvas);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false }));
+    sprite.scale.set(1.15, 0.58, 1);
+    sprite.userData.ownedMap = map;
+    return sprite;
+  }
+
+  goldPopup(pos, n) {
+    const node = this.labelSprite(`+${n}`, "#f6e08a");
+    node.position.copy(pos);
+    this.spawn(node, 0.85, (it) => {
+      const k = 1 - it.life / it.max;
+      it.node.position.y = pos.y + k * 1.15;
+      it.node.material.opacity = 1 - k;
+    });
+  }
+
+  dmgNum(pos, n) {
+    const node = this.labelSprite(`${Math.max(1, Math.round(n))}`, "#ff6a4a");
+    node.position.copy(pos);
+    this.spawn(node, 0.7, (it) => {
+      const k = 1 - it.life / it.max;
+      it.node.position.y = pos.y + k * 0.9;
+      it.node.material.opacity = 1 - k;
+    });
+  }
+
   hit(pos, color = 0xffe08a) {
     const spark = this.card(tex(ART.vfx.glow), 0.55, 0.55, { additive: true, color, opacity: 0.9 });
     spark.position.copy(pos);
@@ -302,6 +341,7 @@ function disposeNode(node) {
     if (child.geometry && !SHARED_GEO.has(child.geometry)) {
       child.geometry.dispose();
     }
+    if (child.userData?.ownedMap) child.userData.ownedMap.dispose();
     if (child.material) {
       if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose?.());
       else child.material.dispose?.();
