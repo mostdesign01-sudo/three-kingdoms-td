@@ -447,6 +447,7 @@ button:disabled {
   align-items: center;
   justify-content: center;
   background: #120c08;
+  pointer-events: auto;
 }
 
 .rotate-card {
