@@ -447,6 +447,7 @@ button:disabled {
   align-items: center;
   justify-content: center;
   background: #120c08;
+  pointer-events: auto;
 }
 
 .rotate-card {
@@ -462,8 +463,13 @@ button:disabled {
 }
 
 .rotate-card p {
-  margin: 8px 0 0;
+  margin: 8px 0 14px;
   color: #e8d4a4;
+}
+
+.rotate-card .horn-btn {
+  margin: 0 auto;
+  pointer-events: auto;
 }
 
 @media (max-height: 420px) {
