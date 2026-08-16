@@ -84,19 +84,38 @@ export function tex(path) {
   return hit instanceof THREE.Texture ? hit : fallbackTexture();
 }
 
-export function makeBillboard(texture, width, height, { ground = true } = {}) {
-  const mat = new THREE.SpriteMaterial({
+export function makeBillboard(texture, width, height, { ground = true, lockYaw = false } = {}) {
+  const geo = new THREE.PlaneGeometry(width, height);
+  if (ground) geo.translate(0, height / 2 + 0.03, 0);
+  const mat = new THREE.MeshBasicMaterial({
     map: texture,
     transparent: true,
     depthWrite: false,
-    alphaTest: 0.12,
+    depthTest: true,
+    alphaTest: 0.18,
+    side: THREE.DoubleSide,
   });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(width, height, 1);
-  if (ground) sprite.center.set(0.5, 0);
-  sprite.userData.height = height;
-  sprite.userData.width = width;
-  return sprite;
+  const visual = new THREE.Mesh(geo, mat);
+  const bob = new THREE.Group();
+  bob.add(visual);
+  const pivot = new THREE.Group();
+  pivot.add(bob);
+  pivot.userData.height = height;
+  pivot.userData.width = width;
+  pivot.userData.visual = visual;
+  pivot.userData.bob = bob;
+  pivot.userData.billboard = true;
+  pivot.userData.lockYaw = lockYaw;
+  pivot.userData.face = 1;
+  return pivot;
+}
+
+export function aimBillboard(obj, camera) {
+  if (!obj?.userData?.billboard || obj.userData.lockYaw) return;
+  const dx = camera.position.x - obj.position.x;
+  const dz = camera.position.z - obj.position.z;
+  if (dx * dx + dz * dz < 1e-6) return;
+  obj.rotation.y = Math.atan2(dx, dz);
 }
 
 export function makeGround(texture) {

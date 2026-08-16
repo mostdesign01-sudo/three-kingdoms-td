@@ -313,6 +313,14 @@ function boot() {
     window.addEventListener("resize", syncOrientation);
     window.addEventListener("orientationchange", syncOrientation);
     window.visualViewport?.addEventListener("resize", syncOrientation);
+    if (new URLSearchParams(location.search).get("shot") === "1") {
+      rotateDismissed = true;
+      hideRotate();
+      enterMap("hulao").then(() => {
+        game.placeTower(3, "ballista");
+        game.placeTower(4, "thunder");
+      });
+    }
   } catch (err) {
     console.warn("[boot] failed", err);
     if (loadingText) loadingText.textContent = "点兵受阻，请刷新再试";

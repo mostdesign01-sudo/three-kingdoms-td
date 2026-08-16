@@ -84,7 +84,8 @@ def chroma(im: Image.Image) -> Image.Image:
             continue
         seen[i] = 1
         r, g, b, a = px[x, y]
-        backdrop = a < 12 or is_key(r, g, b) or (a < 80 and r > 140 and b > 120 and g < 140)
+        near_black = max(r, g, b) < 32 and (r + g + b) < 66
+        backdrop = a < 12 or is_key(r, g, b) or near_black or (a < 80 and r > 140 and b > 120 and g < 140)
         if not backdrop:
             continue
         if a:

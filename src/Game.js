@@ -8,7 +8,7 @@ import {
   TOWERS,
   WAVES,
 } from "./content.js";
-import { MAP_SIZE, loadPlayPack, prefetchRest } from "./art.js";
+import { MAP_SIZE, aimBillboard, loadPlayPack, prefetchRest } from "./art.js";
 import { MAPS, buildPath, getMap } from "./maps.js";
 import {
   decorateMap,
@@ -26,6 +26,9 @@ import { VFX } from "./vfx.js";
 let nid = 1;
 const nextId = () => nid++;
 
+const CAM_H = 22;
+const CAM_BACK = 18;
+
 export class Game {
   constructor(canvas) {
     this.canvas = canvas;
@@ -42,8 +45,9 @@ export class Game {
 
     this.scene = new THREE.Scene();
     this.viewSize = 14;
-    this.camera = new THREE.OrthographicCamera(-14, 14, 14, -14, 0.1, 200);
-    this.camera.position.set(0, 60, 0.01);
+    this.camera = new THREE.OrthographicCamera(-14, 14, 14, -14, 0.1, 220);
+    this.camera.up.set(0, 1, 0);
+    this.camera.position.set(0, CAM_H, CAM_BACK);
     this.camera.lookAt(0, 0, 0);
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -309,7 +313,8 @@ export class Game {
     this.camera.top = s;
     this.camera.bottom = -s;
     this.camera.updateProjectionMatrix();
-    this.camera.position.set(this.panX, 60, this.panZ + 0.01);
+    this.camera.up.set(0, 1, 0);
+    this.camera.position.set(this.panX, CAM_H, this.panZ + CAM_BACK);
     this.camera.lookAt(this.panX, 0, this.panZ);
   }
 
@@ -334,8 +339,15 @@ export class Game {
     }
     this.vfx.update(dt);
     this.bobDecor(dt);
+    this.aimBillboards();
     this.renderer.render(this.scene, this.camera);
   };
+
+  aimBillboards() {
+    for (const h of this.heroes) aimBillboard(h.mesh, this.camera);
+    for (const e of this.enemies) aimBillboard(e.mesh, this.camera);
+    for (const s of this.soldiers) aimBillboard(s.mesh, this.camera);
+  }
 
   bobDecor(dt) {
     const t = performance.now() * 0.001;
@@ -344,10 +356,14 @@ export class Game {
       if (obj.name === "water") obj.position.y = -0.02 + Math.sin(t) * 0.02;
     });
     for (const h of this.heroes) {
-      if (h.mesh && h.hp > 0) h.mesh.position.y = Math.sin(t * 6 + h.x) * 0.04;
+      if (h.mesh?.userData.bob && h.hp > 0) {
+        h.mesh.userData.bob.position.y = Math.sin(t * 6 + h.x) * 0.04;
+      }
     }
     for (const e of this.enemies) {
-      if (e.mesh) e.mesh.position.y = Math.sin(t * 10 + e.dist) * 0.05;
+      if (e.mesh?.userData.bob) {
+        e.mesh.userData.bob.position.y = Math.sin(t * 10 + e.dist) * 0.05;
+      }
     }
     void dt;
   }
@@ -950,6 +966,8 @@ export class Game {
       px: this.panX,
       pz: this.panZ,
       hit,
+      hitX: hit.x,
+      hitZ: hit.z,
       moved: false,
     };
   }
@@ -960,11 +978,15 @@ export class Game {
     const dy = event.clientY - this.drag.sy;
     if (!this.drag.moved && Math.hypot(dx, dy) < 12) return;
     this.drag.moved = true;
-    const w = this.canvas.clientWidth || window.innerWidth;
-    const h = this.canvas.clientHeight || window.innerHeight;
-    this.panX = this.drag.px - (dx / w) * (this.camera.right - this.camera.left);
-    this.panZ = this.drag.pz - (dy / h) * (this.camera.top - this.camera.bottom);
+    this.panX = this.drag.px;
+    this.panZ = this.drag.pz;
     this.applyView();
+    const now = this.groundHit(event);
+    if (now) {
+      this.panX = this.drag.px - (now.x - this.drag.hitX);
+      this.panZ = this.drag.pz - (now.z - this.drag.hitZ);
+      this.applyView();
+    }
   }
 
   onPointerUp(event) {
