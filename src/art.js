@@ -21,6 +21,21 @@ export const ART = {
   coin: "ui/coin.webp",
   skull: "ui/skull.webp",
   horn: "ui/horn.webp",
+  chrome: {
+    back: "ui/btn-back.webp",
+    pause: "ui/btn-pause.webp",
+    cancel: "ui/btn-cancel.webp",
+    speed: (n) => `ui/btn-speed-${n}.webp`,
+    upgrade: "ui/icon-upgrade.webp",
+    sell: "ui/icon-sell.webp",
+    starOn: "ui/star-on.webp",
+    starOff: "ui/star-off.webp",
+    medallion: "ui/medallion.webp",
+    call: "ui/call-flag.webp",
+    title: "ui/title-plaque.webp",
+    board: "ui/campaign-board.webp",
+    wood: "ui/wood-bar.webp",
+  },
   vfx: {
     slash: "vfx/slash.webp",
     slashMark: "vfx/slash-mark.webp",
@@ -34,6 +49,29 @@ export const ART = {
 };
 
 export const VFX_PATHS = Object.values(ART.vfx);
+
+export const CHROME_PATHS = [
+  ART.heart,
+  ART.coin,
+  ART.horn,
+  ART.chrome.back,
+  ART.chrome.pause,
+  ART.chrome.cancel,
+  ART.chrome.speed(1),
+  ART.chrome.speed(2),
+  ART.chrome.speed(3),
+  ART.chrome.upgrade,
+  ART.chrome.sell,
+  ART.chrome.starOn,
+  ART.chrome.starOff,
+  ART.chrome.medallion,
+  ART.chrome.call,
+  ART.chrome.title,
+  ART.chrome.board,
+  ART.chrome.wood,
+  ...["guanyu", "zhaoyun", "zhuge"].map((id) => ART.portrait(id)),
+  ...TOWER_IDS.map((id) => ART.icon(id)),
+];
 
 export function asset(path) {
   return `${BASE}${path.replace(/^\//, "")}`;
@@ -172,6 +210,7 @@ export function playPack(mapId) {
     ...UNIT_IDS.map((id) => ART.unit(id)),
     ...TOWER_IDS.flatMap((id) => [1, 2, 3].map((lv) => ART.tower(id, lv))),
     ...VFX_PATHS,
+    ...CHROME_PATHS,
   ];
 }
 

@@ -23,11 +23,14 @@
     <div id="app">
       <canvas id="view"></canvas>
       <div id="loading" class="screen">
-        <div class="plaque loading-bar"><b id="loading-text">正在点兵……</b></div>
+        <div class="wood-plaque loading-bar">
+          <b id="loading-text">正在点兵……</b>
+          <i class="load-track"><i id="load-fill" class="load-fill"></i></i>
+        </div>
       </div>
 
       <div id="rotate" class="rotate-prompt hidden">
-        <div class="rotate-card">
+        <div class="rotate-card wood-plaque">
           <b>请横过来游玩</b>
           <p>横屏更好操作。若无法自动横置，也可直接进入。</p>
           <button id="btn-enter" class="horn-btn" type="button"><b>进入游戏</b></button>
@@ -35,31 +38,44 @@
       </div>
 
       <div id="ui" class="hidden">
-        <section id="menu" class="screen">
-          <div class="menu-frame">
-            <div class="title-banner">
+        <section id="menu" class="screen campaign">
+          <div class="campaign-bleed" aria-hidden="true">
+            <img id="campaign-board" alt="" />
+          </div>
+          <header class="title-hang">
+            <img id="title-plaque" class="title-plaque" alt="" />
+            <div class="title-copy">
               <h1 class="title">三国保卫战</h1>
               <p class="subtitle">烽火三国塔防</p>
             </div>
-            <p class="blurb">选一处关隘布防。敌军八波来犯，末波乃吕布幻影。</p>
-            <div id="map-list" class="map-list"></div>
-          </div>
+          </header>
+          <p class="blurb">选一处关隘布防。敌军八波来犯，末波乃吕布幻影。</p>
+          <div id="map-list" class="pass-row"></div>
         </section>
 
         <section id="hud" class="hud hidden">
           <div class="hud-tl">
-            <button id="btn-menu" class="iron-btn pip" type="button">返</button>
-            <div class="plaque">
+            <button id="btn-menu" class="icon-btn" type="button" title="回选关">
+              <img id="ico-back" alt="返" />
+            </button>
+            <div class="plaque res-plaque">
               <span class="res"><img id="ico-heart" alt="" /><b id="stat-lives">20/20</b></span>
               <span class="res"><img id="ico-coin" alt="" /><b id="stat-gold">0</b></span>
             </div>
           </div>
 
-          <div class="wave-flag"><b id="stat-wave">0/8</b></div>
+          <div class="wave-flag">
+            <small id="stat-wave-name">待发</small>
+            <b id="stat-wave">0/8</b>
+          </div>
 
           <div id="toast" class="toast hidden"></div>
           <div id="banner" class="banner hidden"></div>
           <div id="wheel" class="kr-wheel hidden"></div>
+          <div id="floaters" class="floaters"></div>
+          <button id="call-flag" class="call-flag hidden" type="button" title="出兵">
+            <img id="ico-call" alt="" />
+          </button>
 
           <div id="hero-bar" class="hero-bar"></div>
 
@@ -68,18 +84,36 @@
               <img id="ico-horn" alt="" />
               <b id="btn-wave-label">出兵</b>
             </button>
-            <button id="btn-speed" class="iron-btn pip" type="button">×1</button>
-            <button id="btn-pause" class="iron-btn pip" type="button">停</button>
+            <button id="btn-speed" class="icon-btn" type="button" title="加速">
+              <img id="ico-speed" alt="×1" />
+            </button>
+            <button id="btn-pause" class="icon-btn" type="button" title="歇兵">
+              <img id="ico-pause" alt="停" />
+            </button>
+          </div>
+        </section>
+
+        <section id="pause" class="screen overlay hidden">
+          <div class="pause-board wood-plaque">
+            <h2>歇兵</h2>
+            <p>旌旗暂歇，重整再战。</p>
+            <div class="overlay-actions col">
+              <button id="btn-resume" class="horn-btn" type="button"><b>继续</b></button>
+              <button id="btn-restart" class="iron-btn wide" type="button">重开此关</button>
+              <button id="btn-quit" class="iron-btn wide" type="button">回选关</button>
+            </div>
           </div>
         </section>
 
         <section id="overlay" class="screen overlay hidden">
-          <div class="scroll-card">
+          <div class="end-board wood-plaque">
             <h2 id="overlay-title">胜负已分</h2>
+            <div id="star-row" class="star-row"></div>
             <p id="overlay-text"></p>
+            <ul id="end-stats" class="end-stats"></ul>
             <div class="overlay-actions">
               <button id="btn-retry" class="horn-btn" type="button"><b>再守此关</b></button>
-              <button id="btn-home" class="iron-btn pip" type="button">选关</button>
+              <button id="btn-home" class="iron-btn wide" type="button">选关</button>
             </div>
           </div>
         </section>

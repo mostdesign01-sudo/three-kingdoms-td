@@ -100,14 +100,14 @@ export function makeSpot() {
   return group;
 }
 
-export function makeRangeRing() {
+export function makeRangeRing(fillColor = 0xc9a227, edgeColor = 0xe8c85a) {
   const group = new THREE.Group();
   const fill = new THREE.Mesh(
     new THREE.CircleGeometry(1, 48),
     new THREE.MeshBasicMaterial({
-      color: 0x5ad66a,
+      color: fillColor,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.13,
       depthWrite: false,
     }),
   );
@@ -115,9 +115,9 @@ export function makeRangeRing() {
   const edge = new THREE.Mesh(
     new THREE.RingGeometry(0.96, 1, 48),
     new THREE.MeshBasicMaterial({
-      color: 0x8cff7a,
+      color: edgeColor,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.38,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),

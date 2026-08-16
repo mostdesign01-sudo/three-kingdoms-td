@@ -27,6 +27,8 @@ import { VFX } from "./vfx.js";
 
 let nid = 1;
 const nextId = () => nid++;
+const EARLY_CALL_GOLD = 8;
+const LEVEL_NAME = ["", "初成", "精锐", "神威"];
 
 const CAM_H = 22;
 const CAM_BACK = 18;
@@ -107,7 +109,13 @@ export class Game {
   syncSelectionFx() {
     if (!this.rangeRing) return;
     const t = this.selectedTower();
-    if (t) {
+    if (this.selected?.kind === "spot" && this.buildPreview && this.map) {
+      const def = TOWERS[this.buildPreview];
+      const p = this.map.spots[this.selected.id];
+      this.rangeRing.visible = true;
+      this.rangeRing.position.set(p[0], 0.05, p[1]);
+      this.rangeRing.scale.setScalar(def.range);
+    } else if (t) {
       const stats = towerStats(t);
       this.rangeRing.visible = true;
       this.rangeRing.position.set(t.x, 0.05, t.z);
@@ -120,6 +128,22 @@ export class Game {
       m.visible = on;
       m.scale.setScalar(on ? 1.08 : 1);
     });
+    this.syncAimRing();
+  }
+
+  syncAimRing() {
+    if (!this.aimRing) return;
+    if (this.aimHero) {
+      const h = this.heroes.find((x) => x.id === this.aimHero);
+      if (h && h.hp > 0 && h.respawn <= 0) {
+        this.aimRing.visible = true;
+        this.aimRing.position.set(h.x, 0.06, h.z);
+        const r = h.id === "zhaoyun" ? h.def.dash || 9 : h.def.skillRadius;
+        this.aimRing.scale.setScalar(r);
+        return;
+      }
+    }
+    this.aimRing.visible = false;
   }
 
   resetPlayState() {
@@ -140,6 +164,9 @@ export class Game {
     this.lost = false;
     this.selected = null;
     this.aimHero = null;
+    this.buildPreview = null;
+    this.goldPops = [];
+    this.endStats = null;
   }
 
   showMenuPreview() {
@@ -210,6 +237,8 @@ export class Game {
 
     this.rangeRing = makeRangeRing();
     this.world.add(this.rangeRing);
+    this.aimRing = makeRangeRing(0x8a5a18, 0xe8c85a);
+    this.world.add(this.aimRing);
     this.framePlayable();
     this.banner(map.name);
     this.emit();
@@ -233,6 +262,7 @@ export class Game {
     }
     this.spotMeshes = [];
     this.rangeRing = null;
+    this.aimRing = null;
   }
 
   frameMap() {
@@ -345,6 +375,7 @@ export class Game {
     }
     this.bobDecor(dt);
     this.aimBillboards();
+    this.syncAimRing();
     this.renderer.render(this.scene, this.camera);
   };
 
@@ -498,6 +529,7 @@ export class Game {
     this.world.remove(e.mesh, e.hpBar, e.blob);
     if (killed) {
       this.gold += e.def.bounty;
+      this.pushGoldPop(e.x, e.z, e.def.bounty);
       this.vfx.death(new THREE.Vector3(e.x, 0.6, e.z));
     }
     for (const s of this.soldiers) if (s.target === e.id) s.target = null;
@@ -789,21 +821,52 @@ export class Game {
     unit.z += (dz / d) * step;
   }
 
+  canCallWave() {
+    if (this.mode !== "playing" || this.won || this.lost) return false;
+    if (this.waveIndex >= WAVES.length) return false;
+    return this.pendingWave || this.waveActive;
+  }
+
   startWave() {
-    if (this.mode !== "playing" || this.waveActive || this.won || this.lost) return;
-    if (this.waveIndex >= WAVES.length) return;
+    if (!this.canCallWave()) return;
+    const early = this.waveActive && !this.pendingWave;
     const wave = WAVES[this.waveIndex];
     this.waveIndex += 1;
     this.waveActive = true;
     this.pendingWave = false;
-    this.spawns = wave.groups.map((g) => ({
+    const next = wave.groups.map((g) => ({
       type: g.type,
       left: g.count,
       interval: g.interval,
       wait: g.delay,
     }));
+    if (early) {
+      this.spawns.push(...next);
+      this.gold += EARLY_CALL_GOLD;
+      this.toast(`提前出兵 +${EARLY_CALL_GOLD}`);
+      const p = this.path.at(0);
+      this.pushGoldPop(p.x, p.z, EARLY_CALL_GOLD);
+    } else {
+      this.spawns = next;
+    }
     this.banner(`第 ${this.waveIndex} 波 · ${wave.name}`);
     this.emit();
+  }
+
+  previewBuild(type) {
+    this.buildPreview = type;
+    this.emit();
+  }
+
+  clearBuildPreview() {
+    if (!this.buildPreview) return;
+    this.buildPreview = null;
+    this.emit();
+  }
+
+  pushGoldPop(x, z, n) {
+    this.goldPops.push({ id: nextId(), x, z, n, at: performance.now() });
+    if (this.goldPops.length > 14) this.goldPops.shift();
   }
 
   placeTower(spotId, type) {
@@ -835,6 +898,7 @@ export class Game {
     this.towers.push(tower);
     if (this.spotMeshes[spotId]) this.spotMeshes[spotId].visible = false;
     this.selected = null;
+    this.buildPreview = null;
     this.emit();
   }
 
@@ -948,9 +1012,19 @@ export class Game {
     if (this.lives <= 0) this.lose();
   }
 
+  captureEnd(won) {
+    this.endStats = {
+      lives: this.lives,
+      gold: this.gold,
+      wave: this.waveIndex,
+      stars: won ? (this.lives >= 16 ? 3 : this.lives >= 8 ? 2 : 1) : 0,
+    };
+  }
+
   win() {
     this.won = true;
     this.mode = "over";
+    this.captureEnd(true);
     this.banner("大捷");
     this.emit();
   }
@@ -958,7 +1032,20 @@ export class Game {
   lose() {
     this.lost = true;
     this.mode = "over";
+    this.captureEnd(false);
     this.banner("城破");
+    this.emit();
+  }
+
+  mockEnd(won = true) {
+    this.won = won;
+    this.lost = !won;
+    this.mode = "over";
+    this.paused = true;
+    this.lives = won ? 18 : 0;
+    this.gold = 246;
+    this.waveIndex = won ? 8 : 3;
+    this.captureEnd(won);
     this.emit();
   }
 
@@ -972,6 +1059,7 @@ export class Game {
 
   togglePause() {
     this.paused = !this.paused;
+    this.silentPause = false;
     this.emit();
   }
 
@@ -991,6 +1079,7 @@ export class Game {
     }
     this.aimBillboards();
     this.paused = true;
+    this.silentPause = true;
   }
 
   zoomShot(x, z, size = 4.4) {
@@ -1010,7 +1099,7 @@ export class Game {
   }
 
   onPointerDown(event) {
-    if (this.mode !== "playing" || this.won || this.lost || this.orientHold) return;
+    if (this.mode !== "playing" || this.won || this.lost || this.orientHold || this.paused) return;
     if (event.target !== this.canvas) return;
     const hit = this.groundHit(event);
     if (!hit) return;
@@ -1129,9 +1218,12 @@ export class Game {
       waveTotal: WAVES.length,
       waveName: this.waveIndex ? WAVES[this.waveIndex - 1].name : "待发",
       pendingWave: this.pendingWave,
+      canCall: this.canCallWave(),
+      earlyCall: this.waveActive && !this.pendingWave && this.waveIndex < WAVES.length,
       waveActive: this.waveActive,
       speed: this.speed,
       paused: this.paused,
+      silentPause: Boolean(this.silentPause),
       won: this.won,
       lost: this.lost,
       aimHero: this.aimHero,
@@ -1159,6 +1251,7 @@ export class Game {
         ? {
             name: def.name,
             level: t.level,
+            levelName: LEVEL_NAME[t.level],
             canUpgrade: Boolean(next),
             upgradeCost: next?.cost ?? 0,
             sell: Math.floor(invested(t) * SELL_RATIO),
@@ -1166,6 +1259,19 @@ export class Game {
             ...this.project(t.x, t.z),
           }
         : null,
+      callFlag: this.canCallWave() && this.path
+        ? {
+            early: this.waveActive && !this.pendingWave,
+            ...this.project(this.path.at(0).x, this.path.at(0).z, 0.15),
+          }
+        : null,
+      goldPops: (this.goldPops || []).map((p) => ({
+        id: p.id,
+        n: p.n,
+        at: p.at,
+        ...this.project(p.x, p.z, 1.15),
+      })),
+      endStats: this.endStats,
     };
   }
 }
