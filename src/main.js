@@ -313,13 +313,13 @@ function boot() {
     window.addEventListener("resize", syncOrientation);
     window.addEventListener("orientationchange", syncOrientation);
     window.visualViewport?.addEventListener("resize", syncOrientation);
-    if (new URLSearchParams(location.search).get("shot") === "1") {
+    const shot = new URLSearchParams(location.search).get("shot");
+    if (shot) {
       rotateDismissed = true;
       hideRotate();
-      enterMap("hulao").then(() => {
-        game.placeTower(3, "ballista");
-        game.placeTower(4, "thunder");
-      });
+      document.body.classList.add("shot");
+      window.__td = game;
+      enterMap("hulao").then(() => setupShot(game, shot));
     }
   } catch (err) {
     console.warn("[boot] failed", err);
@@ -328,6 +328,36 @@ function boot() {
     uiRoot.classList.remove("hidden");
     setLoading(true);
   }
+}
+
+function setupShot(game, shot) {
+  const gy = game.heroes.find((h) => h.id === "guanyu");
+  const zy = game.heroes.find((h) => h.id === "zhaoyun");
+  const zg = game.heroes.find((h) => h.id === "zhuge");
+  if (shot === "1" || shot === "walk") {
+    if (gy) {
+      game.moveHero("guanyu", gy.x + 6.4, gy.z + 1.1);
+      game.panX = gy.x + 2.4;
+      game.panZ = gy.z + 0.4;
+    }
+    if (zy) game.moveHero("zhaoyun", zy.x + 5.2, zy.z);
+  } else if (shot === "guanyu" && gy) {
+    game.panX = gy.x + 1.2;
+    game.panZ = gy.z;
+    game.castHero("guanyu", gy.x + 2.4, gy.z + 1.1);
+  } else if (shot === "zhaoyun" && zy) {
+    game.panX = zy.x + 3.2;
+    game.panZ = zy.z;
+    game.castHero("zhaoyun", zy.x + 7.2, zy.z + 0.35);
+  } else if (shot === "zhuge" && zg) {
+    game.panX = zg.x + 0.6;
+    game.panZ = zg.z;
+    game.castHero("zhuge", zg.x + 1.4, zg.z + 0.8);
+  } else {
+    game.placeTower(3, "ballista");
+    game.placeTower(4, "thunder");
+  }
+  game.applyView();
 }
 
 boot();

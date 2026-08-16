@@ -13,6 +13,7 @@ import { MAPS, buildPath, getMap } from "./maps.js";
 import {
   decorateMap,
   faceSprite,
+  faceToward,
   makeBlob,
   makeCharacter,
   makeHpBar,
@@ -20,6 +21,7 @@ import {
   makeSpot,
   makeTower,
   setHpBar,
+  stepLocomotion,
 } from "./models.js";
 import { VFX } from "./vfx.js";
 
@@ -64,7 +66,7 @@ export class Game {
     this.sun.position.set(12, 28, 10);
     this.scene.add(this.hemi, this.sun, new THREE.AmbientLight(0xfff6e0, 0.32));
 
-    this.vfx = new VFX(this.scene);
+    this.vfx = new VFX(this.scene, this.camera);
     this.world = new THREE.Group();
     this.scene.add(this.world);
 
@@ -199,6 +201,7 @@ export class Game {
         atk: 0,
         respawn: 0,
         move: null,
+        dash: null,
         mesh,
         hpBar: hp,
         blob,
@@ -355,17 +358,11 @@ export class Game {
       if (obj.name === "orb") obj.position.y = 1.12 + Math.sin(t * 3) * 0.08;
       if (obj.name === "water") obj.position.y = -0.02 + Math.sin(t) * 0.02;
     });
-    for (const h of this.heroes) {
-      if (h.mesh?.userData.bob && h.hp > 0) {
-        h.mesh.userData.bob.position.y = Math.sin(t * 6 + h.x) * 0.04;
-      }
-    }
-    for (const e of this.enemies) {
-      if (e.mesh?.userData.bob) {
-        e.mesh.userData.bob.position.y = Math.sin(t * 10 + e.dist) * 0.05;
-      }
-    }
     void dt;
+  }
+
+  dustAt(x, z) {
+    this.vfx.dust(x, z);
   }
 
   tick(dt) {
@@ -473,7 +470,13 @@ export class Game {
       e.x = p.x;
       e.z = p.z;
       e.mesh.position.set(p.x, 0, p.z);
-      faceSprite(e.mesh, p.nx);
+      const moving = !e.blocked;
+      const step = e.def.speed * e.slow * dt;
+      stepLocomotion(e, dt, {
+        vx: moving ? p.nx * step : 0,
+        vz: moving ? p.nz * step : 0,
+        dust: (x, z) => this.dustAt(x, z),
+      });
       e.hpBar.position.set(p.x, (e.mesh.userData.height || 2) + 0.1, p.z);
       e.blob.position.set(p.x, 0, p.z);
       setHpBar(e.hpBar, e.hp / e.maxHp);
@@ -625,7 +628,14 @@ export class Game {
         for (const e of this.enemies) if (e.blocked === s.id) e.blocked = null;
       }
       s.mesh.position.set(s.x, 0, s.z);
-      if (target) faceSprite(s.mesh, target.x - s.x);
+      const moving = stepLocomotion(s, dt, {
+        vx: s.x - (s._lx ?? s.x),
+        vz: s.z - (s._lz ?? s.z),
+        dust: (x, z) => this.dustAt(x, z),
+      });
+      s._lx = s.x;
+      s._lz = s.z;
+      if (!moving && target) faceToward(s.mesh, target.x - s.x, dt);
       s.hpBar.position.set(s.x, (s.mesh.userData.height || 1.9) + 0.1, s.z);
       s.blob.position.set(s.x, 0, s.z);
       setHpBar(s.hpBar, s.hp / s.maxHp);
@@ -636,6 +646,7 @@ export class Game {
     for (const h of this.heroes) {
       h.cd = Math.max(0, h.cd - dt);
       if (h.respawn > 0) {
+        h.dash = null;
         h.respawn -= dt;
         h.mesh.visible = false;
         h.hpBar.visible = false;
@@ -649,7 +660,22 @@ export class Game {
         }
         continue;
       }
-      if (h.move) {
+      const prevX = h.x;
+      const prevZ = h.z;
+      if (h.dash) {
+        h.dash.t += dt;
+        const k = Math.min(1, h.dash.t / h.dash.dur);
+        const e = k * (2 - k);
+        h.x = h.dash.x0 + (h.dash.x1 - h.dash.x0) * e;
+        h.z = h.dash.z0 + (h.dash.z1 - h.dash.z0) * e;
+        if (k >= 1) {
+          h.x = h.dash.x1;
+          h.z = h.dash.z1;
+          h.homeX = h.x;
+          h.homeZ = h.z;
+          h.dash = null;
+        }
+      } else if (h.move) {
         this.steer(h, h.move, h.def.speed, dt);
         if (dist2(h, h.move) < 0.25) {
           h.homeX = h.move.x;
@@ -665,17 +691,22 @@ export class Game {
       }
       const foe = this.nearest(h.x, h.z, h.def.range);
       h.atk -= dt;
-      if (foe && h.atk <= 0) {
+      if (foe && h.atk <= 0 && !h.dash) {
         h.atk = h.def.fireRate;
         const from = new THREE.Vector3(h.x, 1.2, h.z);
         const to = new THREE.Vector3(foe.x, 0.9, foe.z);
-        if (h.id === "zhuge") this.vfx.orb(from, to);
-        else this.vfx.bolt(from, to, h.id === "guanyu" ? 0xff4a3a : 0xd8deea);
+        if (h.id === "zhuge") this.vfx.talisman(from, to);
+        else if (h.id === "guanyu") this.vfx.meleeSlash(from, to);
+        else this.vfx.spearThrust(from, to);
         this.hurt(foe, h.def.damage, from);
       }
       h.mesh.position.set(h.x, 0, h.z);
-      if (foe) faceSprite(h.mesh, foe.x - h.x);
-      else if (h.move) faceSprite(h.mesh, h.move.x - h.x);
+      const moving = stepLocomotion(h, dt, {
+        vx: h.x - prevX,
+        vz: h.z - prevZ,
+        dust: (x, z) => this.dustAt(x, z),
+      });
+      if (!moving && foe) faceToward(h.mesh, foe.x - h.x, dt);
       h.hpBar.position.set(h.x, (h.mesh.userData.height || 2.5) + 0.1, h.z);
       h.blob.position.set(h.x, 0, h.z);
       setHpBar(h.hpBar, h.hp / h.def.hp);
@@ -866,21 +897,23 @@ export class Game {
     this.aimHero = null;
     if (h.id === "guanyu") {
       h.move = { x, z };
-      this.vfx.slash(new THREE.Vector3(x, 0, z));
+      this.vfx.slash(new THREE.Vector3(h.x, 0, h.z), new THREE.Vector3(x, 0, z), h.def.skillRadius);
       this.aoe(x, z, h.def.skillRadius, h.def.skillDamage);
     } else if (h.id === "zhaoyun") {
-      const from = new THREE.Vector3(h.x, 0.8, h.z);
+      const x0 = h.x;
+      const z0 = h.z;
+      const from = new THREE.Vector3(x0, 0.8, z0);
       const to = new THREE.Vector3(x, 0.8, z);
-      this.vfx.dash(from, to);
+      this.vfx.dash(from, to, h.mesh);
       const steps = 10;
       for (let i = 0; i <= steps; i++) {
         const k = i / steps;
-        this.aoe(h.x + (x - h.x) * k, h.z + (z - h.z) * k, h.def.skillRadius, h.def.skillDamage / 3);
+        this.aoe(x0 + (x - x0) * k, z0 + (z - z0) * k, h.def.skillRadius, h.def.skillDamage / 3);
       }
-      h.x = x;
-      h.z = z;
+      h.move = null;
+      h.dash = { x0, z0, x1: x, z1: z, t: 0, dur: 0.3 };
     } else if (h.id === "zhuge") {
-      this.vfx.bagua(new THREE.Vector3(x, 0, z), h.def.zoneTime);
+      this.vfx.bagua(new THREE.Vector3(x, 0, z), h.def.zoneTime, h.def.skillRadius);
       this.zones.push({
         x,
         z,
