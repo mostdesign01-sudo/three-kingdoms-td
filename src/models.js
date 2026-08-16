@@ -79,7 +79,7 @@ export function makeTower(type, level = 1) {
   const texture = tex(ART.tower(type, lv));
   const heights = { ballista: 3.25, thunder: 2.7, barracks: 2.75, sage: 3.15 };
   const [w, h] = spriteSize(texture, heights[type] || 2.9, 3.4);
-  return makeBillboard(texture, w, h);
+  return makeBillboard(texture, w, h, { lockYaw: true });
 }
 
 export function makeSpot() {
@@ -183,9 +183,16 @@ export function makePathRibbon() {
   return new THREE.Group();
 }
 
-export function faceSprite(sprite, dirX) {
-  if (!sprite?.scale) return;
-  const w = Math.abs(sprite.userData.width || sprite.scale.x);
-  const h = sprite.userData.height || sprite.scale.y;
-  sprite.scale.set(dirX < -0.05 ? -w : w, h, 1);
+export function faceSprite(obj, dirX) {
+  const visual = obj?.userData?.visual;
+  if (visual) {
+    const face = dirX < -0.05 ? -1 : 1;
+    visual.scale.x = face;
+    obj.userData.face = face;
+    return;
+  }
+  if (!obj?.scale) return;
+  const w = Math.abs(obj.userData.width || obj.scale.x);
+  const h = obj.userData.height || obj.scale.y;
+  obj.scale.set(dirX < -0.05 ? -w : w, h, 1);
 }
