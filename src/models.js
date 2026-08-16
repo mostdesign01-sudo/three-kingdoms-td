@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { ART, makeBillboard, makeDecal, makeGround, tex } from "./art.js";
+import { ART, makeBillboard, makeGround, tex } from "./art.js";
 
 export const geo = {
   box: new THREE.BoxGeometry(1, 1, 1),
@@ -83,7 +83,21 @@ export function makeTower(type, level = 1) {
 }
 
 export function makeSpot() {
-  return makeDecal(tex(ART.pad), 1.85);
+  const group = new THREE.Group();
+  const edge = new THREE.Mesh(
+    new THREE.RingGeometry(0.7, 0.92, 48),
+    new THREE.MeshBasicMaterial({
+      color: 0xe8c85a,
+      transparent: true,
+      opacity: 0.92,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  edge.rotation.x = -Math.PI / 2;
+  group.add(edge);
+  group.visible = false;
+  return group;
 }
 
 export function makeRangeRing() {
