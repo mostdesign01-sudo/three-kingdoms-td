@@ -94,7 +94,7 @@ body,
 #menu.campaign {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: stretch;
   padding: calc(8px + var(--safe-t)) 16px calc(14px + var(--safe-b));
   background: #120c08;
@@ -163,10 +163,14 @@ body,
 }
 
 .blurb {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(10px + var(--safe-b));
   z-index: 1;
   text-align: center;
-  margin: 2px 0 10px;
+  margin: 0;
+  text-shadow: 0 2px 0 #1a1208;
 }
 
 .flag-field {

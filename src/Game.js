@@ -1109,6 +1109,7 @@ export class Game {
     this.lives = won ? 18 : 0;
     this.gold = 246;
     this.waveIndex = won ? 8 : 3;
+    this.waveActive = true;
     this.captureEnd(won);
     this.emit();
   }

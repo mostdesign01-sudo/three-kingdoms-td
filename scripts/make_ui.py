@@ -159,24 +159,67 @@ def board_frame():
     return base.convert("RGBA")
 
 
+def _ellipse_mask(size, feather=90):
+    w, h = size
+    mask = Image.new("L", (w, h), 0)
+    d = ImageDraw.Draw(mask)
+    d.ellipse((8, 8, w - 8, h - 8), fill=255)
+    if feather:
+        mask = mask.filter(ImageFilter.GaussianBlur(feather))
+    return mask
+
+
+def _place_land(board, src, box, fade=0.88):
+    x, y, tw, th = box
+    im = src.resize((tw, th), Image.Resampling.LANCZOS).convert("RGBA")
+    im = ImageEnhance.Color(im).enhance(1.05)
+    im = ImageEnhance.Brightness(im).enhance(fade)
+    im.putalpha(_ellipse_mask((tw, th), max(48, min(tw, th) // 7)))
+    board.alpha_composite(im, (x, y))
+
+
 def campaign_board():
     w, h = 1600, 900
+    land = Image.new("RGBA", (w, h), (28, 18, 10, 255))
+    wash = ImageDraw.Draw(land, "RGBA")
+    wash.ellipse((40, 80, 780, 860), fill=(46, 78, 36, 255))
+    wash.ellipse((420, 20, 1180, 620), fill=(36, 72, 88, 255))
+    wash.ellipse((820, 160, 1580, 880), fill=(92, 78, 48, 255))
+    land = land.filter(ImageFilter.GaussianBlur(28))
+
+    hulao = Image.open(MAPS / "hulao.jpg")
+    chibi = Image.open(MAPS / "chibi.jpg")
+    qishan = Image.open(MAPS / "qishan.jpg")
+    _place_land(land, hulao, (20, 160, 860, 620), 0.9)
+    _place_land(land, chibi, (430, 30, 820, 560), 0.86)
+    _place_land(land, qishan, (780, 180, 800, 600), 0.9)
+
+    ink = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(ink, "RGBA")
+    path = [(352, 486), (520, 420), (800, 306), (1000, 380), (1216, 468)]
+    d.line(path, fill=(154, 28, 28, 90), width=10)
+    for i in range(0, 42):
+        t = i / 41
+        x = path[0][0] * (1 - t) * (1 - t) + path[2][0] * 2 * t * (1 - t) + path[4][0] * t * t
+        y = path[0][1] * (1 - t) * (1 - t) + path[2][1] * 2 * t * (1 - t) + path[4][1] * t * t
+        d.ellipse((x - 4, y - 4, x + 4, y + 4), fill=(180, 36, 28, 210))
+    # compass rose, KR-style corner mark
+    cx, cy = 148, 760
+    d.ellipse((cx - 46, cy - 46, cx + 46, cy + 46), outline=(224, 184, 74, 160), width=3)
+    d.polygon([(cx, cy - 40), (cx + 8, cy), (cx, cy + 12), (cx - 8, cy)], fill=(224, 184, 74, 200))
+    d.polygon([(cx, cy + 40), (cx - 8, cy), (cx, cy - 12), (cx + 8, cy)], fill=(90, 60, 24, 200))
+    land = Image.alpha_composite(land, ink)
+
     board = board_frame()
-    thumbs = []
-    for name in ("hulao-thumb.jpg", "chibi-thumb.jpg", "qishan-thumb.jpg"):
-        im = Image.open(MAPS / name).convert("RGB")
-        thumbs.append(im.resize((620, 420), Image.Resampling.LANCZOS))
-    positions = [(40, 240), (490, 80), (940, 260)]
-    for im, (x, y) in zip(thumbs, positions):
-        faded = ImageEnhance.Brightness(im).enhance(0.72)
-        faded = ImageEnhance.Color(faded).enhance(0.85)
-        board.paste(faded, (x, y))
+    board.alpha_composite(land)
+    frame = ImageDraw.Draw(board, "RGBA")
+    frame.rectangle((0, 0, w - 1, h - 1), outline=(224, 184, 74, 230), width=14)
+    frame.rectangle((18, 18, w - 19, h - 19), outline=(90, 60, 24, 200), width=6)
     vignette = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     vd = ImageDraw.Draw(vignette)
-    vd.rectangle((0, 0, w, 160), fill=(18, 10, 6, 140))
-    vd.rectangle((0, h - 120, w, h), fill=(18, 10, 6, 160))
-    board = Image.alpha_composite(board, vignette)
-    return board.filter(ImageFilter.GaussianBlur(0.2))
+    vd.rectangle((0, 0, w, 110), fill=(18, 10, 6, 110))
+    vd.rectangle((0, h - 90, w, h), fill=(18, 10, 6, 130))
+    return Image.alpha_composite(board, vignette).filter(ImageFilter.GaussianBlur(0.2))
 
 
 def wood_bar():
