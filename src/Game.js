@@ -17,6 +17,7 @@ import {
   makeBlob,
   makeCharacter,
   makeHpBar,
+  makeRallyFlag,
   makeRangeRing,
   makeSpot,
   makeTower,
@@ -27,6 +28,8 @@ import { VFX } from "./vfx.js";
 
 let nid = 1;
 const nextId = () => nid++;
+const EARLY_CALL_GOLD = 8;
+const LEVEL_NAME = ["", "初成", "精锐", "神威"];
 
 const CAM_H = 22;
 const CAM_BACK = 18;
@@ -107,7 +110,13 @@ export class Game {
   syncSelectionFx() {
     if (!this.rangeRing) return;
     const t = this.selectedTower();
-    if (t) {
+    if (this.selected?.kind === "spot" && this.buildPreview && this.map) {
+      const def = TOWERS[this.buildPreview];
+      const p = this.map.spots[this.selected.id];
+      this.rangeRing.visible = true;
+      this.rangeRing.position.set(p[0], 0.05, p[1]);
+      this.rangeRing.scale.setScalar(def.range);
+    } else if (t) {
       const stats = towerStats(t);
       this.rangeRing.visible = true;
       this.rangeRing.position.set(t.x, 0.05, t.z);
@@ -115,11 +124,41 @@ export class Game {
     } else {
       this.rangeRing.visible = false;
     }
+    this.pulseSpots();
+    this.syncAimRing();
+  }
+
+  pulseSpots() {
+    const t = performance.now() * 0.005;
     this.spotMeshes?.forEach((m, i) => {
+      const occupied = this.towers.some((x) => x.spotId === i);
+      m.visible = !occupied;
+      if (occupied) return;
       const on = this.selected?.kind === "spot" && this.selected.id === i;
-      m.visible = on;
-      m.scale.setScalar(on ? 1.08 : 1);
+      const ring = m.userData.ring;
+      const decal = m.userData.decal;
+      if (ring) {
+        ring.material.opacity = on ? 0.55 + Math.sin(t) * 0.32 : 0.18;
+        const s = on ? 1 + Math.sin(t) * 0.07 : 1;
+        ring.scale.setScalar(s);
+      }
+      if (decal) decal.material.opacity = on ? 0.72 : 0.38;
     });
+  }
+
+  syncAimRing() {
+    if (!this.aimRing) return;
+    if (this.aimHero) {
+      const h = this.heroes.find((x) => x.id === this.aimHero);
+      if (h && h.hp > 0 && h.respawn <= 0) {
+        const p = this.aimPoint || { x: h.x, z: h.z };
+        this.aimRing.visible = true;
+        this.aimRing.position.set(p.x, 0.06, p.z);
+        this.aimRing.scale.setScalar(h.def.skillRadius);
+        return;
+      }
+    }
+    this.aimRing.visible = false;
   }
 
   resetPlayState() {
@@ -140,11 +179,17 @@ export class Game {
     this.lost = false;
     this.selected = null;
     this.aimHero = null;
+    this.buildPreview = null;
+    this.goldPops = [];
+    this.endStats = null;
+    this.aimPoint = null;
+    this.callArmed = false;
   }
 
   showMenuPreview() {
     this.clearWorld();
     this.applyTheme(MAPS[0].theme);
+    decorateMap(this.world, MAPS[0]);
     this.frameMap();
   }
 
@@ -210,6 +255,8 @@ export class Game {
 
     this.rangeRing = makeRangeRing();
     this.world.add(this.rangeRing);
+    this.aimRing = makeRangeRing(0x8a5a18, 0xe8c85a);
+    this.world.add(this.aimRing);
     this.framePlayable();
     this.banner(map.name);
     this.emit();
@@ -233,6 +280,7 @@ export class Game {
     }
     this.spotMeshes = [];
     this.rangeRing = null;
+    this.aimRing = null;
   }
 
   frameMap() {
@@ -345,6 +393,8 @@ export class Game {
     }
     this.bobDecor(dt);
     this.aimBillboards();
+    this.syncAimRing();
+    this.pulseSpots();
     this.renderer.render(this.scene, this.camera);
   };
 
@@ -498,6 +548,8 @@ export class Game {
     this.world.remove(e.mesh, e.hpBar, e.blob);
     if (killed) {
       this.gold += e.def.bounty;
+      this.pushGoldPop(e.x, e.z, e.def.bounty);
+      this.vfx.goldPopup(new THREE.Vector3(e.x, 1.15, e.z), e.def.bounty);
       this.vfx.death(new THREE.Vector3(e.x, 0.6, e.z));
     }
     for (const s of this.soldiers) if (s.target === e.id) s.target = null;
@@ -731,6 +783,7 @@ export class Game {
   hurt(enemy, amount, from) {
     if (!enemy || enemy.hp <= 0) return;
     enemy.hp -= amount;
+    this.vfx.dmgNum(new THREE.Vector3(enemy.x, 1.2, enemy.z), amount);
     if (from) faceSprite(enemy.mesh, from.x - enemy.x);
     if (enemy.hp <= 0) {
       const idx = this.enemies.indexOf(enemy);
@@ -789,21 +842,87 @@ export class Game {
     unit.z += (dz / d) * step;
   }
 
+  canCallWave() {
+    if (this.mode !== "playing" || this.won || this.lost) return false;
+    if (this.waveIndex >= WAVES.length) return false;
+    return this.pendingWave || this.waveActive;
+  }
+
+  nextWaveInfo() {
+    if (this.waveIndex >= WAVES.length) return null;
+    const wave = WAVES[this.waveIndex];
+    return {
+      index: this.waveIndex + 1,
+      name: wave.name,
+      label: `第${this.waveIndex + 1}波 · ${wave.name}`,
+      types: wave.groups.map((g) => ({
+        name: ENEMIES[g.type]?.name || g.type,
+        count: g.count,
+      })),
+    };
+  }
+
+  previewCallWave() {
+    const info = this.nextWaveInfo();
+    if (!info) return;
+    this.callArmed = true;
+    const types = info.types.map((t) => `${t.name}×${t.count}`).join(" ");
+    this.toast(`${info.label} ${types}`);
+    this.emit();
+  }
+
   startWave() {
-    if (this.mode !== "playing" || this.waveActive || this.won || this.lost) return;
-    if (this.waveIndex >= WAVES.length) return;
+    if (!this.canCallWave()) return;
+    const firstWait = this.waveIndex === 0 && this.pendingWave;
+    const dying = this.waveActive && !this.pendingWave;
+    const early = dying || firstWait;
     const wave = WAVES[this.waveIndex];
     this.waveIndex += 1;
     this.waveActive = true;
     this.pendingWave = false;
-    this.spawns = wave.groups.map((g) => ({
+    this.callArmed = false;
+    const next = wave.groups.map((g) => ({
       type: g.type,
       left: g.count,
       interval: g.interval,
       wait: g.delay,
     }));
+    if (dying) this.spawns.push(...next);
+    else this.spawns = next;
+    if (early) {
+      this.gold += EARLY_CALL_GOLD;
+      this.toast(`提前出兵 +${EARLY_CALL_GOLD}`);
+      const p = this.path.at(0);
+      this.pushGoldPop(p.x, p.z, EARLY_CALL_GOLD);
+      this.vfx.goldPopup(new THREE.Vector3(p.x, 1.2, p.z), EARLY_CALL_GOLD);
+    }
     this.banner(`第 ${this.waveIndex} 波 · ${wave.name}`);
     this.emit();
+  }
+
+  selectHero(id) {
+    const h = this.heroes.find((x) => x.id === id);
+    if (!h || h.hp <= 0 || h.respawn > 0) return;
+    this.selected = { kind: "hero", id };
+    this.aimHero = null;
+    this.aimPoint = null;
+    this.emit();
+  }
+
+  previewBuild(type) {
+    this.buildPreview = type;
+    this.emit();
+  }
+
+  clearBuildPreview() {
+    if (!this.buildPreview) return;
+    this.buildPreview = null;
+    this.emit();
+  }
+
+  pushGoldPop(x, z, n) {
+    this.goldPops.push({ id: nextId(), x, z, n, at: performance.now() });
+    if (this.goldPops.length > 14) this.goldPops.shift();
   }
 
   placeTower(spotId, type) {
@@ -832,9 +951,15 @@ export class Game {
       rallyX: (p[0] + toward.x) / 2,
       rallyZ: (p[1] + toward.z) / 2,
     };
+    if (type === "barracks") {
+      tower.rallyFlag = makeRallyFlag();
+      tower.rallyFlag.position.set(tower.rallyX, 0, tower.rallyZ);
+      this.world.add(tower.rallyFlag);
+    }
     this.towers.push(tower);
     if (this.spotMeshes[spotId]) this.spotMeshes[spotId].visible = false;
     this.selected = null;
+    this.buildPreview = null;
     this.emit();
   }
 
@@ -863,6 +988,7 @@ export class Game {
     if (!t) return;
     this.gold += Math.floor(invested(t) * SELL_RATIO);
     this.world.remove(t.mesh);
+    if (t.rallyFlag) this.world.remove(t.rallyFlag);
     this.towers = this.towers.filter((x) => x.id !== t.id);
     for (const s of this.soldiers.filter((s) => s.towerId === t.id)) {
       this.world.remove(s.mesh, s.hpBar, s.blob);
@@ -882,6 +1008,7 @@ export class Game {
     const h = this.heroes.find((x) => x.id === id);
     if (!h || h.hp <= 0 || h.cd > 0 || h.respawn > 0) return;
     this.aimHero = id;
+    this.aimPoint = { x: h.x, z: h.z };
     this.toast(`点地面施放 ${h.def.skill}`);
     this.emit();
   }
@@ -897,6 +1024,7 @@ export class Game {
     if (!h || h.hp <= 0 || h.cd > 0) return;
     h.cd = h.def.skillCd;
     this.aimHero = null;
+    this.aimPoint = null;
     if (h.id === "guanyu") {
       h.move = { x, z };
       this.vfx.slash(new THREE.Vector3(h.x, 0, h.z), new THREE.Vector3(x, 0, z), h.def.skillRadius);
@@ -948,9 +1076,19 @@ export class Game {
     if (this.lives <= 0) this.lose();
   }
 
+  captureEnd(won) {
+    this.endStats = {
+      lives: this.lives,
+      gold: this.gold,
+      wave: this.waveIndex,
+      stars: won ? (this.lives >= 18 ? 3 : this.lives >= 6 ? 2 : 1) : 0,
+    };
+  }
+
   win() {
     this.won = true;
     this.mode = "over";
+    this.captureEnd(true);
     this.banner("大捷");
     this.emit();
   }
@@ -958,7 +1096,21 @@ export class Game {
   lose() {
     this.lost = true;
     this.mode = "over";
+    this.captureEnd(false);
     this.banner("城破");
+    this.emit();
+  }
+
+  mockEnd(won = true) {
+    this.won = won;
+    this.lost = !won;
+    this.mode = "over";
+    this.paused = true;
+    this.lives = won ? 18 : 0;
+    this.gold = 246;
+    this.waveIndex = won ? 8 : 3;
+    this.waveActive = true;
+    this.captureEnd(won);
     this.emit();
   }
 
@@ -972,6 +1124,7 @@ export class Game {
 
   togglePause() {
     this.paused = !this.paused;
+    this.silentPause = false;
     this.emit();
   }
 
@@ -991,6 +1144,7 @@ export class Game {
     }
     this.aimBillboards();
     this.paused = true;
+    this.silentPause = true;
   }
 
   zoomShot(x, z, size = 4.4) {
@@ -1010,7 +1164,7 @@ export class Game {
   }
 
   onPointerDown(event) {
-    if (this.mode !== "playing" || this.won || this.lost || this.orientHold) return;
+    if (this.mode !== "playing" || this.won || this.lost || this.orientHold || this.paused) return;
     if (event.target !== this.canvas) return;
     const hit = this.groundHit(event);
     if (!hit) return;
@@ -1028,6 +1182,10 @@ export class Game {
   }
 
   onPointerMove(event) {
+    if (this.aimHero && this.mode === "playing") {
+      const aim = this.groundHit(event);
+      if (aim) this.aimPoint = { x: aim.x, z: aim.z };
+    }
     if (!this.drag || event.pointerId !== this.drag.id) return;
     const dx = event.clientX - this.drag.sx;
     const dy = event.clientY - this.drag.sy;
@@ -1098,6 +1256,7 @@ export class Game {
       if (t?.type === "barracks") {
         t.rallyX = hit.x;
         t.rallyZ = hit.z;
+        if (t.rallyFlag) t.rallyFlag.position.set(hit.x, 0, hit.z);
         this.toast("虎贲已改集结点");
         return;
       }
@@ -1127,11 +1286,18 @@ export class Game {
       lives: this.lives,
       wave: this.waveIndex,
       waveTotal: WAVES.length,
-      waveName: this.waveIndex ? WAVES[this.waveIndex - 1].name : "待发",
+      waveName: this.waveIndex
+        ? `第${this.waveIndex}波 · ${WAVES[this.waveIndex - 1].name}`
+        : this.nextWaveInfo()?.label || "待发",
       pendingWave: this.pendingWave,
+      canCall: this.canCallWave(),
+      earlyCall: this.waveActive && !this.pendingWave && this.waveIndex < WAVES.length,
+      nextWave: this.nextWaveInfo(),
+      callArmed: Boolean(this.callArmed),
       waveActive: this.waveActive,
       speed: this.speed,
       paused: this.paused,
+      silentPause: Boolean(this.silentPause),
       won: this.won,
       lost: this.lost,
       aimHero: this.aimHero,
@@ -1146,6 +1312,9 @@ export class Game {
         desc: h.def.desc,
         cd: h.cd,
         maxCd: h.def.skillCd,
+        hp: h.hp,
+        maxHp: h.def.hp,
+        respawn: h.respawn,
         ready: h.cd <= 0 && h.hp > 0 && h.respawn <= 0,
         dead: h.hp <= 0 || h.respawn > 0,
       })),
@@ -1159,6 +1328,7 @@ export class Game {
         ? {
             name: def.name,
             level: t.level,
+            levelName: LEVEL_NAME[t.level],
             canUpgrade: Boolean(next),
             upgradeCost: next?.cost ?? 0,
             sell: Math.floor(invested(t) * SELL_RATIO),
@@ -1166,6 +1336,20 @@ export class Game {
             ...this.project(t.x, t.z),
           }
         : null,
+      callFlag: this.canCallWave() && this.path
+        ? {
+            early: (this.waveActive && !this.pendingWave) || (this.waveIndex === 0 && this.pendingWave),
+            armed: Boolean(this.callArmed),
+            ...this.project(this.path.at(0).x, this.path.at(0).z, 0.15),
+          }
+        : null,
+      goldPops: (this.goldPops || []).map((p) => ({
+        id: p.id,
+        n: p.n,
+        at: p.at,
+        ...this.project(p.x, p.z, 1.15),
+      })),
+      endStats: this.endStats,
     };
   }
 }

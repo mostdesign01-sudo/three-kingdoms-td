@@ -21,6 +21,26 @@ export const ART = {
   coin: "ui/coin.webp",
   skull: "ui/skull.webp",
   horn: "ui/horn.webp",
+  chrome: {
+    back: "ui/btn-back.webp",
+    pause: "ui/icon-pause.webp",
+    cancel: "ui/icon-cancel.webp",
+    play: "ui/icon-play.webp",
+    speed: "ui/icon-speed.webp",
+    speedN: (n) => `ui/btn-speed-${n}.webp`,
+    upgrade: "ui/icon-upgrade.webp",
+    sell: "ui/icon-sell.webp",
+    star: "ui/icon-star.webp",
+    starOn: "ui/star-on.webp",
+    starOff: "ui/star-off.webp",
+    medallion: "ui/medallion.webp",
+    call: "ui/call-flag.webp",
+    flag: "ui/flag-pin.webp",
+    title: "ui/title-plaque.webp",
+    board: "ui/campaign-board.webp",
+    wood: "ui/wood-bar.webp",
+    plaque: "ui/plaque-wood.webp",
+  },
   vfx: {
     slash: "vfx/slash.webp",
     slashMark: "vfx/slash-mark.webp",
@@ -34,6 +54,36 @@ export const ART = {
 };
 
 export const VFX_PATHS = Object.values(ART.vfx);
+
+export const CHROME_PATHS = [
+  ART.heart,
+  ART.coin,
+  ART.horn,
+  ART.skull,
+  ART.pad,
+  ART.chrome.back,
+  ART.chrome.pause,
+  ART.chrome.play,
+  ART.chrome.speed,
+  ART.chrome.cancel,
+  ART.chrome.speedN(1),
+  ART.chrome.speedN(2),
+  ART.chrome.speedN(3),
+  ART.chrome.upgrade,
+  ART.chrome.sell,
+  ART.chrome.star,
+  ART.chrome.starOn,
+  ART.chrome.starOff,
+  ART.chrome.medallion,
+  ART.chrome.call,
+  ART.chrome.flag,
+  ART.chrome.title,
+  ART.chrome.board,
+  ART.chrome.wood,
+  ART.chrome.plaque,
+  ...["guanyu", "zhaoyun", "zhuge"].map((id) => ART.portrait(id)),
+  ...TOWER_IDS.map((id) => ART.icon(id)),
+];
 
 export function asset(path) {
   return `${BASE}${path.replace(/^\//, "")}`;
@@ -172,6 +222,7 @@ export function playPack(mapId) {
     ...UNIT_IDS.map((id) => ART.unit(id)),
     ...TOWER_IDS.flatMap((id) => [1, 2, 3].map((lv) => ART.tower(id, lv))),
     ...VFX_PATHS,
+    ...CHROME_PATHS,
   ];
 }
 
