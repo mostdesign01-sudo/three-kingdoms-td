@@ -47,6 +47,7 @@ let game;
 let lastPanelKey = "";
 let entering = false;
 let sellArmed = false;
+let rotateDismissed = false;
 
 function setLoading(hidden, text) {
   if (text && loadingText) loadingText.textContent = text;
@@ -69,15 +70,33 @@ function setHidden(el, hidden) {
   el.classList.toggle("hidden", hidden);
 }
 
-function isPortrait() {
-  return window.matchMedia("(orientation: portrait)").matches
-    || window.innerHeight > window.innerWidth + 16;
+function viewportSize() {
+  const vv = window.visualViewport;
+  if (vv && vv.width && vv.height) return { w: vv.width, h: vv.height };
+  return { w: window.innerWidth, h: window.innerHeight };
+}
+
+function isWide() {
+  const { w, h } = viewportSize();
+  return w > h;
+}
+
+function hideRotate() {
+  rotate.classList.add("hidden");
+  game?.setOrientHold(false);
 }
 
 function syncOrientation() {
-  const portrait = isPortrait();
-  rotate.classList.toggle("hidden", !portrait);
-  game?.setOrientHold(portrait);
+  if (rotateDismissed || isWide()) {
+    hideRotate();
+    return;
+  }
+  rotate.classList.remove("hidden");
+}
+
+function enterAnyway() {
+  rotateDismissed = true;
+  hideRotate();
 }
 
 function tryLockLandscape() {
@@ -289,9 +308,11 @@ function boot() {
     });
     document.querySelector("#btn-home").addEventListener("click", () => game.backToMenu());
     game.emit();
+    document.querySelector("#btn-enter").addEventListener("click", enterAnyway);
     syncOrientation();
     window.addEventListener("resize", syncOrientation);
     window.addEventListener("orientationchange", syncOrientation);
+    window.visualViewport?.addEventListener("resize", syncOrientation);
   } catch (err) {
     console.warn("[boot] failed", err);
     if (loadingText) loadingText.textContent = "点兵受阻，请刷新再试";
